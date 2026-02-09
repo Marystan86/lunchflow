@@ -1,0 +1,24 @@
+<!-- static/screens/feed.html -->
+
+    <section class="screen feed">
+    <header class="screen-header">
+        <h2>Иду кушать</h2>
+    </header>
+
+    <div class="eat-hero">
+        <div id="eatCircle" class="eat-circle" role="button" tabindex="0" aria-pressed="false" aria-label="Найти людей рядом">🍽️</div>
+
+        <!-- подсказка -->
+        <div id="eatHint" class="eat-hint">Нажми на кнопку, чтобы найти людей рядом</div>
+
+        <div id="eatStatus" class="eat-status hidden">
+            Геолокация активна на <strong id="eatStatusTimer">59:59</strong>
+        </div>
+    </div>
+
+    <h4 id="nearbyCount" class="section-title">Рядом - 0 человек готовы обедать</h4>
+
+    <div id="nearbyCards" class="nearby-cards">
+        <!-- JS будет заполнять person-card'ы сюда -->
+    </div>
+</section>

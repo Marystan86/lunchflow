@@ -1,0 +1,195 @@
+<!-- templates/places.html -->
+
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Добавить заведение</title>
+  <link rel="stylesheet" href="/static/css/places.css">
+</head>
+<body>
+    <section class="screen places">
+    <header class="screen-header">
+        <h2>Добавить заведение</h2>
+    </header>
+
+    <div class="container">
+        <form id="addPlaceForm" class="place-form" onsubmit="return false;">
+        <label>
+            Название
+            <input type="text" id="placeName" required />
+        </label>
+
+        <label>
+            Сфера / категория
+            <input type="text" id="placeCategory" />
+        </label>
+
+        <label>
+            Рейтинг (0–5, можно дробный)
+            <input type="number" id="placeRating" step="0.1" min="0" max="5" value="4.0" />
+        </label>
+
+        <label>
+            Время открытия (HH:MM)
+            <input type="time" id="placeOpen" />
+        </label>
+
+        <label>
+            Время закрытия (HH:MM)
+            <input type="time" id="placeClose" />
+        </label>
+
+        <label>
+            Адрес
+            <input type="text" id="placeAddress" />
+        </label>
+
+        <label>
+            Ссылка на фото (URL)
+            <input type="url" id="placePhoto" placeholder="https://..." />
+        </label>
+
+        <div style="margin-top:10px;">
+            <button id="placeSubmit">Добавить</button>
+            <span id="placeFormStatus" style="margin-left:10px;"></span>
+        </div>
+        </form>
+
+        <hr/>
+
+        <h4 class="section-title">Предпросмотр / недавно добавленные</h4>
+        <div class="places-carousel" id="placesPreview"></div>
+    </div>
+        </section>
+    <script>
+        (async function(){
+            async function fetchPlaces() {
+                try {
+                const res = await fetch('/api/places?limit=30');
+                if(!res.ok) return [];
+                const j = await res.json().catch(()=>({places:[]}));
+                return j.places || [];
+                } catch(e) { console.error(e); return []; }
+            }
+
+            function renderPlaceCard(place){
+                const el = document.createElement('article');
+                el.className = 'place-card';
+                el.dataset.id = place.id; // сохраним id на элементе
+                el.innerHTML = `
+                <div class="place-info">
+                    <h5>${escapeHtml(place.name || '')}</h5>
+                    <div class="rating" data-rating="${place.rating || 0}">${renderStars(place.rating || 0)}</div>
+                    <div class="distance">${place.category ? escapeHtml(place.category) : ''}</div>
+                    <div class="place-times">${place.open_time || ''}${place.open_time && place.close_time ? ' - ' : ''}${place.close_time || ''}</div>
+                    <div class="address">${place.address ? escapeHtml(place.address) : ''}</div>
+                </div>
+                ${place.photo ? `<img src="${escapeAttr(place.photo)}" alt="${escapeAttr(place.name || '')}" />` : ''}
+                <div class="place-actions">
+                    <button class="btn btn-delete" data-id="${place.id}" title="Удалить заведение">Удалить</button>
+                </div>
+                `;
+                return el;
+            }
+
+            function renderStars(r){
+                const pct = Math.max(0, Math.min(5, r)) / 5 * 100;
+                return `<div class="stars-outer"><div class="stars-inner" style="width:${pct}%">★★★★★</div><div class="stars-bg">★★★★★</div><span class="rating-num">${r}</span></div>`;
+            }
+
+            function escapeHtml(s){ return (s+'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+            function escapeAttr(s){ return (s+'').replace(/"/g,'&quot;'); }
+
+            async function loadPreview(){
+                const list = await fetchPlaces();
+                const root = document.getElementById('placesPreview');
+                root.innerHTML = '';
+                list.forEach(p => root.appendChild(renderPlaceCard(p)));
+            }
+
+            document.getElementById('placeSubmit').addEventListener('click', async function(){
+                const name = document.getElementById('placeName').value.trim();
+                if(!name){ document.getElementById('placeFormStatus').innerText = 'Нужно название'; return; }
+                const payload = {
+                name,
+                category: document.getElementById('placeCategory').value.trim(),
+                rating: parseFloat(document.getElementById('placeRating').value || 0),
+                open_time: document.getElementById('placeOpen').value || null,
+                close_time: document.getElementById('placeClose').value || null,
+                address: document.getElementById('placeAddress').value.trim(),
+                photo: document.getElementById('placePhoto').value.trim() || null
+                };
+                const statusEl = document.getElementById('placeFormStatus');
+                statusEl.innerText = 'Отправляю...';
+                try {
+                const res = await fetch('/api/places', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                if(!res.ok){
+                    const err = await res.json().catch(()=>({detail:'Ошибка сервера'}));
+                    statusEl.innerText = err.detail || 'Ошибка';
+                    return;
+                }
+                const j = await res.json().catch(()=>({ok:false}));
+                if(j.ok){
+                    statusEl.innerText = 'Добавлено';
+                    const root = document.getElementById('placesPreview');
+                    root.insertBefore(renderPlaceCard(j.place), root.firstChild);
+                    // document.getElementById('addPlaceForm').reset();
+                } else {
+                    statusEl.innerText = (j.error || 'Ошибка');
+                }
+                } catch(e){
+                console.error(e);
+                statusEl.innerText = 'Ошибка сети';
+                }
+            });
+
+            // Делегированная обработка кликов (удаление) - внутри IIFE
+            const previewRoot = document.getElementById('placesPreview');
+            previewRoot.addEventListener('click', async function(e){
+                const btn = e.target.closest('.btn-delete');
+                if(!btn) return;
+                const id = btn.getAttribute('data-id');
+                if(!id) return;
+                if(!confirm('Удалить это заведение?')) return;
+
+                const origText = btn.innerText;
+                btn.disabled = true;
+                btn.innerText = 'Удаляю...';
+                try {
+                const res = await fetch('/api/places/' + encodeURIComponent(id), { method: 'DELETE' });
+                if(!res.ok){
+                    const err = await res.json().catch(()=>({detail:'Ошибка удаления'}));
+                    alert(err.detail || 'Ошибка удаления');
+                    btn.disabled = false;
+                    btn.innerText = origText;
+                    return;
+                }
+                const j = await res.json().catch(()=>({ok:false}));
+                if(res.ok && j.ok){
+                    const card = btn.closest('.place-card');
+                    if(card) card.remove();
+                } else {
+                    alert((j && j.detail) || (j && j.error) || 'Ошибка удаления');
+                    btn.disabled = false;
+                    btn.innerText = origText;
+                }
+                } catch(err){
+                console.error(err);
+                alert('Сетевая ошибка при удалении');
+                btn.disabled = false;
+                btn.innerText = origText;
+                }
+            });
+
+            // init preview
+            loadPreview();
+        })();
+    </script>
+</body>
+</html>

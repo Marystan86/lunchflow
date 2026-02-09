@@ -1,0 +1,101 @@
+<!-- static\index.html -->
+
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>LunchFlow</title>
+    <link rel="stylesheet" href="/static/css/basic.css">
+    <link rel="stylesheet" href="/static/css/home.css">
+    <link rel="stylesheet" href="/static/css/nav.css">
+    <link rel="stylesheet" href="/static/css/feed.css">
+    <link rel="stylesheet" href="/static/css/profile.css">
+    <link rel="stylesheet" href="/static/css/dev.css">
+    <link rel="stylesheet" href="/static/css/places.css">
+    <link rel="stylesheet" href="/static/css/modal.css">
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="/static/hero.js" defer></script>
+    <script type="module" src="/static/places.js" defer></script>
+    <script type="module" src="/static/client.js" defer></script>
+</head>
+<body>
+    <div class = "mobile-container">
+        <nav id="menu" class="menu">
+            <button data-screen="home">
+                <img src="/static/images/home.svg" alt="home"/>
+            </button>
+            <button data-screen="chat">
+                <img src="/static/images/chat.svg" alt="chat"/>
+            </button>
+            <button data-screen="feed">
+                <img src="/static/images/feed.svg" alt="feed"/>
+            </button>
+            <button data-screen="map">
+                <img src="/static/images/map.svg" alt="map"/>
+            </button>
+            <button data-screen="profile">
+                <img src="/static/images/profile.svg" alt="profile"/>
+            </button>
+        </nav>
+
+        <main id="app" class="app"></main>
+    </div>
+
+    <!-- container for dynamic modals (если вы не используете JS-creator) -->
+<div id="screenModals"></div>
+
+<!-- Tag modal (static) -->
+<div id="tagModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-overlay"></div>
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="tagModalTitle">
+    <div class="modal-header">
+      <div>
+        <div class="m-title" id="tagModalTitle">Теги</div>
+        <div class="m-sub">Выберите теги или добавьте собственный</div>
+      </div>
+    </div>
+
+    <div class="modal-body" style="flex-direction:column;gap:12px">
+      <div id="tagModalList" class="tag-list" style="max-height:40vh;overflow:auto;padding:6px 0"></div>
+
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px;">
+        <input id="tagModalNewInput" type="text" placeholder="Добавить тег" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.08)" />
+        <button id="tagModalAdd" class="btn">Добавить</button>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button id="tagModalCancel" class="btn outline">Отмена</button>
+      <button id="tagModalSave" class="btn primary">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review modal (static) -->
+<div id="reviewModal" class="modal hidden" aria-hidden="true">
+  <div class="modal-overlay"></div>
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="reviewModalTitle">
+    <div class="modal-header">
+      <img id="reviewTargetAvatar" class="m-avatar" src="/static/images/default_avatar.svg" alt="" />
+      <div>
+        <div class="m-title" id="reviewModalTitle">Оставить отзыв</div>
+        <div class="m-sub" id="reviewTargetName">Пользователь</div>
+      </div>
+    </div>
+
+    <div class="modal-body" style="flex-direction:column;gap:12px">
+      <div id="reviewReactions" class="reactions-wrap"></div>
+      <textarea id="reviewComment" rows="3" placeholder="Комментарий (необязательно)" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.08)"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button id="reviewModalCancel" class="btn outline">Отмена</button>
+      <button id="reviewModalSend" class="btn primary">Отправить</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

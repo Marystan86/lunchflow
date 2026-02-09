@@ -1,0 +1,420 @@
+/* static/css/profile.css */
+
+.profile-card{
+  position: relative;
+  overflow: visible;
+  margin-top: 25px;
+}
+
+.profile-top{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background-color: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.avatar-lg{
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+  border: 3px solid rgba(0,0,0,0.03);
+}
+
+.profile-info{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.profile-info .name{
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-info .username {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-info .age{
+  font-size: 13px;
+  color: var(--muted);
+}
+.profile-info .geo{
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.settings-btn{
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.04);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--text);
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.settings-btn:active{ transform: scale(.97); }
+
+.tags-panel{
+  margin-top: 8px;
+  background: var(--card);
+  /* border-radius: calc(var(--radius-md) - 2px); */
+  padding: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  box-shadow: var(--shadow);
+  border-radius: var(--radius-lg);
+}
+
+.tag{
+  padding: 10px 25px;
+  border-radius: 999px;
+  font-size: 13px;
+  border: none;
+  cursor: pointer;
+  box-shadow: none;
+  transition: transform .12s ease, opacity .12s ease;
+  background: rgba(0,0,0,0.75); 
+  color: #fff;
+}
+.tag:active{ transform: translateY(1px); }
+
+.tag.outline{
+  background: #C1BEBE;
+  color: var(--text);
+  border: 1px solid rgba(0,0,0,0.04);
+}
+
+.meet-list{
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.meet-card{
+  flex-shrink: 0;
+  min-width: 220px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  background: var(--card);
+  border-radius: 14px;
+  padding: 10px;
+  /* box-shadow: var(--shadow); */
+  /* border: 1px solid rgba(0,0,0,0.03); */
+}
+
+/* маленькая аватарка встречи (круглая) */
+.meet-avatar{
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+/* текст справа от аватарки */
+.meet-info{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.meet-name{
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.meet-place{
+  font-size: 13px;
+  color: var(--muted);
+}
+.meet-date{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ===== Small responsive tweaks ===== */
+@media (max-width: 380px){
+  .avatar-lg{ width: 64px; height: 64px; }
+  .meet-card{ min-width: 260px; }
+  .tags-panel{ padding: 10px; gap: 8px; }
+}
+
+/* subtle focus for accessibility */
+.settings-btn:focus,
+.tag:focus{
+  outline: 2px solid rgba(235,76,55,0.12);
+  outline-offset: 2px;
+}
+
+
+
+
+
+
+
+
+
+/* modal: визуал и поведение */
+.modal.hidden { display: none; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+}
+
+/* затемнение + размытие фонового контента */
+.modal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  transition: opacity .18s ease;
+}
+
+/* карточка модалки */
+.modal-content {
+  position: relative;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  padding: 20px;
+  border-radius: 15px;
+  width: calc(100% - 20%);
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.28);
+  z-index: 100000;
+  transform: translateY(6px) scale(.995);
+  transition: transform .18s cubic-bezier(.2,.9,.25,1), opacity .16s ease;
+  animation: modalIn .18s ease forwards;
+}
+
+/* лёгкая анимация появления */
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(12px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* header: показать пользователя */
+.modal-header {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  margin-bottom:10px;
+}
+.modal-header .m-avatar {
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  border: 2px solid rgba(0,0,0,0.04);
+}
+.modal-header .m-title {
+  font-weight:700;
+  font-size:16px;
+}
+.modal-header .m-sub { font-size:13px; color:var(--muted); }
+
+/* tag list: явное выделение выбранных */
+.tag-list { display:flex; flex-wrap:wrap; gap:8px; max-height:52vh; overflow:auto; padding:8px 0; }
+.tag-list .tag {
+  cursor:pointer;
+  padding:8px 12px;
+  border-radius:999px;
+  border:1px solid rgba(0,0,0,0.08);
+  background: transparent;
+  color: var(--text);
+  transition: transform .08s ease, background .12s ease, color .12s ease;
+}
+.tag-list .tag:hover { transform: translateY(-2px); }
+.tag-list .tag.selected {
+  background: linear-gradient(90deg,#2b6ff7,#2bcbf7);
+  color: #fff;
+  border-color: rgba(0,0,0,0.06);
+  box-shadow: 0 8px 18px rgba(43,107,247,0.12);
+}
+
+/* actions */
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+.btn { padding:8px 12px; border-radius:10px; cursor:pointer; border: none; }
+.btn.outline { background:transparent; border:1px solid rgba(0,0,0,0.08); }
+.btn.primary { background:#eb4c37; color:#fff; }
+
+
+
+
+
+.person-card:focus { outline: 2px solid rgba(43,107,247,0.18); outline-offset: 3px; }
+
+.modal-window { position:relative; background:#fff; padding:16px; border-radius:8px; z-index:9999; width:320px; max-width:90%; }
+
+
+
+/* ===== Reviews: big emoji + single horizontal row ===== */
+.reactions-wrap {
+  display: flex;
+  gap: 12px;
+  flex-wrap: nowrap;              /* все элементы в одну линию */
+  overflow-x: auto;               /* горизонтальная прокрутка при переполнении */
+  -webkit-overflow-scrolling: touch;
+  align-items: flex-start;        /* чтобы подписи под эмодзи выровнялись корректно */
+  padding: 6px 4px;
+}
+
+/* каждый отзыв: эмодзи сверху, подпись снизу */
+.reaction-item {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-width: 90px;
+  max-width: 107px;
+  height: 110px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--card);
+  /* border: 1px solid rgba(0,0,0,0.04); */
+  /* box-shadow: var(--shadow); */
+  text-align: center;
+  cursor: pointer;
+}
+
+/* эмодзи крупнее и центрированно */
+.reaction-emoji {
+  font-size: 37px;
+  line-height: 1;
+  display: block;
+  margin-bottom: 8px;
+  width: 100%;
+  text-align: center;
+}
+
+/* label inline: browser may break only between first and rest */
+.reaction-label {
+  display: inline-block;
+  max-width: 100%;
+  text-align: center;
+  vertical-align: top;
+  white-space: normal;
+  margin-bottom: 5px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* не ломать слова внутри спанов */
+.reaction-first,
+.reaction-rest {
+  display: inline;            /* keep inline so they can sit on same line */
+  white-space: nowrap;        /* prevent internal wrapping */
+}
+
+/* визуальная настройка (по желанию) */
+.reaction-first { font-weight: 600; color: var(--text); font-size: 13px; }
+.reaction-rest  { color: var(--muted); font-size: 13px; }
+
+/* фокус-стиль для клавиатурной доступности */
+.reaction-item:focus {
+  outline: 2px solid rgba(43,107,247,0.18);
+  outline-offset: 3px;
+}
+
+/* адаптив: на очень узких экранах - уменьшить эмодзи и ширину карточек */
+@media (max-width: 380px) {
+  .reaction-emoji { font-size: 28px; }
+  .reaction-item { min-width: 76px; max-width: 90px; padding: 6px 8px; }
+  .reaction-label { font-size: 12px; }
+}
+
+
+/* --- floating circular back button (top-left) --- */
+#floatingBackBtn {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card, #fff);
+  color: var(--text);
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+  z-index: 12000;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+  padding: 0;
+}
+#floatingBackBtn svg { display:block; pointer-events: none; color: var(--text); }
+#floatingBackBtn:active { transform: translateY(1px) scale(.98); }
+#floatingBackBtn:focus { outline: 3px solid rgba(43,107,247,0.14); outline-offset: 2px; }
+
+/* смещение на маленьких экранах (если нужно) */
+@media (max-width: 360px) {
+  #floatingBackBtn { left: 8px; top: 8px; width: 40px; height: 40px; }
+}
+
+/* --- make full emoji label highlight (both spans) --- */
+/* убираем разницу стилей между первым словом и остальными;
+   подсветка при hover/focus будет окрашивать всю подпись */
+.reaction-first,
+.reaction-rest {
+  display: inline;
+  white-space: nowrap;
+  font-weight: 600;          /* теперь весь label выделён одинаково */
+  color: var(--text);
+}
+
+/* более заметная подсветка при Hover/Focus на карточке */
+.reaction-item:hover .reaction-first,
+.reaction-item:hover .reaction-rest,
+.reaction-item:focus .reaction-first,
+.reaction-item:focus .reaction-rest {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.reaction-item.compact.selected {
+  background: #fff8e3;
+  border-color: #eb4c37;
+}

@@ -1,0 +1,38 @@
+/* .map {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 60px;
+} */
+
+.dev-card {
+  background: rgba(0,0,0,0.05);
+  border-radius: var(--radius-lg);
+  padding: 30px 22px;
+  text-align: center;
+  /* max-width: 320px; */
+  /* width: 100%; */
+  box-shadow: var(--shadow);
+  color: var(--text);
+}
+
+.dev-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 14px;
+  cursor: default;
+  box-shadow: 0 4px 10px rgba(235,76,55,0.25);
+}
+
+.dev-card p {
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  color: var(--text);
+}

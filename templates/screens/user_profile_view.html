@@ -1,0 +1,29 @@
+<!-- templates/screens/user_profile_view.html -->
+
+<section class="screen user-profile-view">
+    <header class="screen-header">
+        <h2>Профиль пользователя</h2>
+    </header>
+
+    <div class="profile-card">
+        <div class="profile-top">
+            <img id="viewAvatar" class="avatar-lg profile-avatar" src="/static/images/default_avatar.svg" alt="avatar" />
+            <div class="profile-info">
+                <div id="viewName" class="name"></div>
+                <!-- <div id="viewUsername" class="username muted"></div> -->
+                <div id="viewAge" class="age muted"></div>
+            </div>
+        </div>
+    </div>
+
+    <section class="profile-reviews" style="margin-top:12px;">
+        <h3 class="section-title">Отзывы</h3>
+        <div id="reviewsList" class="reviews-list"></div>
+    </section>
+
+    <div class="profile-actions" style="margin-top:12px;">
+        <button id="callBtn" class="btn primary">Позвать</button>
+    </div>
+
+    <div id="screenModals"></div>
+</section>

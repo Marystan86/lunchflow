@@ -1,0 +1,312 @@
+:root{
+  --max-width: 980px;
+}
+
+/* Reset-ish */
+/* * { box-sizing: border-box; } */
+
+/* ограничит эффект только для этой секции и её вложенных элементов */
+/* .screen.places,
+.screen.places * ,
+.screen.places *::before,
+.screen.places *::after {
+  box-sizing: border-box;
+} */
+
+/* html,body { height:100%; margin:0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+a { color: inherit; text-decoration: none; } */
+
+/* Page shell */
+.screen.places { padding: 28px 16px; display:flex; justify-content:center; }
+.container { width:100%; max-width:var(--max-width); background:transparent; }
+
+/* Form layout */
+.place-form {
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--gap);
+  background: var(--card);
+  padding: 18px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  align-items: start;
+}
+
+/* Make single-column on small screens */
+@media (max-width:760px){
+  .place-form { grid-template-columns: 1fr; padding:14px; }
+}
+
+/* Label + input */
+.place-form label {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  font-size:13px;
+  color:var(--text);
+}
+.place-form input[type="text"],
+.place-form input[type="time"],
+.place-form input[type="number"],
+.place-form input[type="url"] {
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid #e6e8ea;
+  background: #fff;
+  font-size:14px;
+  color:var(--text);
+  outline: none;
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+.place-form input:focus {
+  box-shadow: 0 6px 18px rgba(235,76,55,0.08);
+  border-color: rgba(235,76,55,0.25);
+}
+
+/* Full-width element (for the submit row) spans columns */
+.place-form > div[style] { grid-column: 1 / -1; display:flex; align-items:center; }
+
+/* Primary button */
+button#placeSubmit {
+  background: linear-gradient(180deg,var(--accent), #d43b2a);
+  color: #fff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-weight:600;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(235,76,55,0.12);
+  transition: transform .08s ease, box-shadow .12s ease, opacity .08s ease;
+}
+button#placeSubmit:hover { transform: translateY(-1px); }
+button#placeSubmit:active { transform: translateY(0); }
+button#placeSubmit:disabled { opacity:.6; cursor:not-allowed; }
+
+/* Section title and preview area */
+hr { border: none; height:1px; background:#eee; margin:18px 0; border-radius:1px; }
+.section-title { margin: 15px 0px 0px 4px; color:var(--muted); font-size:14px; }
+
+/* Carousel / grid of place cards */
+.places-carousel {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+/* Card */
+.place-card {
+  background: var(--card);
+  border-radius: 12px;
+  padding: 12px;
+  display:flex;
+  gap: 12px;
+  align-items: center;
+  box-shadow: var(--shadow);
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  min-height: 88px;
+}
+
+/* Info block */
+.place-info { display:flex; flex-direction:column; gap:3px; min-width: 0; }
+.place-info h5 {
+  margin:0;
+  font-size:15px;
+  font-weight:700;
+  line-height:1.2;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.place-info .distance { font-size:12px; color:var(--muted); }
+.place-info .address { font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* times small */
+.place-times { font-size:12px; color:var(--muted); }
+
+/* Rating visual (stars) */
+/* base: show 5 stars in background, overlay inner with width% */
+.stars-outer { position:relative; display:inline-block; font-size:14px; line-height:1; font-family: "Times", serif; }
+.stars-bg { color:#e6e6e6; }
+.stars-inner { position:absolute; top:0; left:0; white-space:nowrap; overflow:hidden; color:var(--accent); pointer-events:none; }
+.rating-num { font-size:12px; margin-left:8px; color:var(--muted); vertical-align:middle; }
+
+/* compact rating container */
+.rating { display:flex; align-items:center; gap:6px; }
+
+/* small utilities */
+.container .muted { color:var(--muted); font-size:13px; }
+.small { font-size:13px; color:var(--muted); }
+
+/* focus & a11y */
+button:focus, input:focus { outline: 3px solid rgba(235,76,55,0.12); outline-offset:2px; }
+
+/* empty-state when no places */
+.places-carousel:empty::before {
+  content: "Список пуст - добавь первое заведение";
+  display:block;
+  padding: 20px;
+  border-radius: 10px;
+  background: linear-gradient(180deg,#fff,#fafafa);
+  color:var(--muted);
+  text-align:center;
+  border:1px dashed #eee;
+}
+
+/* small screens: card layout stacks image below */
+@media (max-width:460px){
+  /* держим карточку в строке, но уменьшаем размеры и межэлем. отступы */
+  .place-card {
+    flex-direction: row;       /* НЕ столбец - картинка остаётся справа */
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    min-width: 0;             /* важно для корректного обрезания текста */
+    flex: 0 0 auto;           /* разрешаем карточкам сжиматься под ширину экрана */
+  }
+
+  /* уменьшенная картинка, которая остаётся справа благодаря margin-left:auto */
+  .place-card img {
+    width: 88px;              /* подберите значение под дизайн: 64–100px */
+    height: 64px;
+    flex: 0 0 88px;           /* фиксированная ширина для картинки */
+    object-fit: cover;
+    border-radius: 8px;
+    margin-left: auto;        /* чтобы картинка "прилипала" к правому краю */
+  }
+
+  /* заголовок - допускаем перенос на две строки */
+  .place-info h5 {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* если используете горизонтальную карусель - немного уменьшаем ширину карточки */
+  .place-card { flex: 0 0 280px; min-width: 220px; }
+}
+
+/* 
+@media (max-width:760px) {
+  .screen.places,
+  .screen.places *,
+  .screen.places *::before,
+  .screen.places *::after {
+    box-sizing: border-box;
+  }
+} */
+.container,
+.container *, 
+.container *::before,
+.container *::after {
+  box-sizing: border-box;
+}
+
+.place-actions { margin-left: auto; display:flex; align-items:center; gap:8px; }
+.btn { font-size:13px; padding:8px 10px; border-radius:8px; border: none; cursor: pointer; }
+.btn-delete {
+  background: transparent;
+  color: #c0392b;
+  border: 1px solid rgba(192,57,43,0.12);
+  padding:6px 10px;
+  border-radius:8px;
+}
+.btn-delete:hover { background: rgba(192,57,43,0.04); transform: translateY(-1px); }
+.btn-delete:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+
+
+/* modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12,14,16,0.5);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index: 2000;
+  padding: 20px;
+}
+.modal-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 14px 40px rgba(10,12,14,0.25);
+  width: 760px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow:auto;
+  position:relative;
+  padding: 18px;
+}
+.modal-close {
+  position:absolute;
+  right:10px;
+  top:8px;
+  border:none;
+  background:transparent;
+  font-size:26px;
+  line-height:1;
+  cursor:pointer;
+}
+.modal-body { display:flex; gap:16px; align-items:flex-start; }
+.modal-photo img { width:220px; height:160px; object-fit:cover; border-radius:8px; }
+.modal-info { flex:1; min-width:0; }
+.modal-name { margin:0 0 6px 0; font-size:20px; }
+.modal-category, .modal-times, .modal-meta, .modal-address { margin-top:8px; color:#6b6f73; font-size:13px; }
+.small-muted { color: #7f8488; font-size:13px; }
+
+
+/* horizontal single-row carousel */
+.places-carousel {
+  display: flex;                   /* строки в одну линию */
+  flex-direction: row;
+  gap: 14px;                       /* расстояние между карточками */
+  align-items: stretch;
+  overflow-x: auto;                /* горизонтальная прокрутка */
+  overflow-y: hidden;
+  padding: 12px 6px;               /* внутренняя подложка */
+  scroll-behavior: smooth;         /* плавный скролл при programmatic scroll */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;   /* чтобы карточки "прилипали" по старту */
+  background: transparent;
+}
+
+/* карточка фиксированной минимальной ширины (регулируй под дизайн) */
+.place-card {
+  flex: 0 0 320px;
+  min-width: 260px;
+  max-width: 360px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: none;
+  background: var(--card);
+  border: 1px solid #f0f0f0;
+  scroll-snap-align: start;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+/* hover/focus - небольшой подъём */
+.place-card:hover, .place-card:focus-within {
+  transform: translateY(-4px);
+}
+
+/* картинка - подгоняем под вертикальный размер карточки */
+.place-card img {
+  width: 170px;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  flex: 0 0 110px;
+  margin-left: auto;
+}
+
+/* hide native scrollbar (не критично; можно убрать если не нравится) */
+.places-carousel::-webkit-scrollbar{ height: 8px; }
+.places-carousel::-webkit-scrollbar-thumb{ background: rgba(0,0,0,0.12); border-radius: 999px; }
+.places-carousel,
+.reactions-wrap { scrollbar-color: rgba(0,0,0,0.12) transparent; scrollbar-width: thin; }

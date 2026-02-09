@@ -1,0 +1,34 @@
+<!-- templates/screens/profile_edit.html -->
+
+<section class="screen profile-edit">
+    <header class="screen-header">
+        <h2>Редактирование профиля</h2>
+    </header>
+
+    <div class="profile-card">
+        <form id="profileEditForm" class="form" onsubmit="return false;">
+            <div class="profile-top" style="align-items:flex-start;">
+                <img id="editAvatarPreview" class="avatar-lg" src="/static/images/default_avatar.svg" alt="Avatar"/>
+                <div style="flex:1; display:flex; flex-direction:column; gap:8px;">
+                <label>Имя
+                    <input id="editName" type="text" placeholder="Ваше имя" />
+                </label>
+                <label>Username
+                    <input id="editUsername" type="text" placeholder="username (без @)" />
+                </label>
+                <label>Возраст
+                    <input id="editAge" type="number" min="0" placeholder="Возраст" />
+                </label>
+                <label>URL аватара
+                    <input id="editAvatar" type="text" placeholder="https://..." />
+                </label>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:16px;">
+                <button id="saveProfileBtn" class="tag outline" type="button">Сохранить</button>
+                <button id="cancelEditBtn" class="tag" type="button">Отмена</button>
+            </div>
+        </form>
+    </div>
+</section>

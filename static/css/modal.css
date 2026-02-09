@@ -1,0 +1,266 @@
+/* === Modal: общий каркас и анимации (дополнение к существующим .modal/.modal-overlay/.modal-content) === */
+.modal.hidden { display: none !important; }
+.modal { position: fixed; inset: 0; z-index: 20000; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
+.modal-overlay { position: absolute; inset: 0; background: rgba(12,14,16,0.45); backdrop-filter: blur(6px) saturate(120%); -webkit-backdrop-filter: blur(6px) saturate(120%); transition: opacity .18s ease; }
+.modal-card, .modal-window, .modal-content { position: relative; background: var(--card); color: var(--text); border-radius: 14px; box-shadow: var(--shadow); width: 760px; max-width: calc(100% - 32px); max-height: 84vh; overflow:auto; padding: 18px; transform: translateY(6px) scale(.995); transition: transform .18s cubic-bezier(.2,.9,.25,1), opacity .16s ease; animation: modalIn .18s ease forwards; }
+@keyframes modalIn { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+/* compact modal (small centered card like incoming invite) */
+.modal-window { width: 420px; max-width: calc(100% - 40px); border-radius: 12px; padding: 16px; }
+
+/* header/title */
+.modal-header { display:flex; gap:12px; align-items:center; margin-bottom:8px; }
+.modal-header .m-avatar { width:44px; height:44px; border-radius:50%; object-fit:cover; box-shadow: 0 6px 16px rgba(0,0,0,0.12); border: 2px solid rgba(0,0,0,0.04); }
+.modal-header .m-title { font-weight:700; font-size:16px; }
+.modal-header .m-sub { font-size:13px; color:var(--muted); }
+
+/* modal text blocks */
+.modal .muted { color: var(--muted); font-size:14px; line-height:1.4; }
+.modal h3 { margin:0 0 8px 0; font-size:18px; font-weight:700; }
+
+/* actions row */
+.modal-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:14px; }
+.btn { padding:8px 12px; border-radius:10px; cursor:pointer; border: none; font-weight:600; font-size:14px; background: transparent; color: var(--text); box-shadow: none; }
+.btn:active{ transform: translateY(1px); }
+.btn.primary { background: linear-gradient(180deg,var(--accent), #d43b2a); color:#fff; box-shadow: 0 8px 22px rgba(235,76,55,0.12); }
+.btn.outline { background: transparent; border: 1px solid rgba(0,0,0,0.06); color: var(--text); }
+
+/* accessible focus */
+.btn:focus, .modal .tag:focus, .reaction-item:focus { outline: 3px solid rgba(43,107,247,0.12); outline-offset: 3px; }
+
+/* small responsive modal */
+@media (max-width:520px) {
+  .modal-card, .modal-content, .modal-window { width: calc(100% - 28px); padding: 14px; border-radius: 12px; max-height: 90vh; }
+  .modal-header .m-title { font-size:15px; }
+}
+
+/* === Invite modal specific (invite-modal) === */
+.invite-modal label { display:block; font-size:13px; margin-bottom:6px; color:var(--text); }
+.invite-modal input[type="datetime-local"], .invite-modal select, .invite-modal textarea {
+  width:100%; padding:10px 12px; border-radius:10px; border:1px solid #e6e8ea; background: #fff; font-size:14px; color:var(--text); outline: none;
+  transition: box-shadow .12s ease, border-color .12s ease;
+}
+.invite-modal input[type="datetime-local"]:focus, .invite-modal select:focus, .invite-modal textarea:focus {
+  box-shadow: 0 6px 18px rgba(235,76,55,0.08); border-color: rgba(235,76,55,0.18);
+}
+.invite-modal .meal-options { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+.invite-modal .meal-options label { display:inline-flex; gap:6px; align-items:center; padding:6px 10px; border-radius:8px; cursor:pointer; border:1px solid rgba(0,0,0,0.04); background:transparent; font-size:13px; }
+.invite-modal .meal-options input[type="radio"] { accent-color: var(--accent); }
+
+/* === Survey modal (yes/no) === */
+.survey-modal .btn.primary { min-width:110px; }
+.survey-modal .btn { min-width:90px; }
+
+/* === Review / Feedback modal === */
+.review-modal .reactions-wrap, #reviewReactions { display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; padding:6px 0; }
+.reaction-item {
+  flex: 0 0 auto; display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  min-width: 90px; max-width: 120px; height: 110px; padding:10px; border-radius: 10px; background: var(--card);
+  border: 1px solid rgba(0,0,0,0.04); cursor:pointer; transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+  text-align:center;
+}
+.reaction-item:hover { transform: translateY(-4px); box-shadow: 0 10px 30px rgba(0,0,0,0.06); border-color: rgba(0,0,0,0.06); }
+.reaction-item.selected { background: #fff8e3; border-color: var(--accent); box-shadow: 0 10px 30px rgba(235,76,55,0.08); }
+.reaction-emoji { font-size:34px; line-height:1; margin-bottom:8px; display:block; width:100%; text-align:center; }
+.reaction-label { font-weight:700; font-size:13px; color:var(--text); white-space:normal; }
+.reaction-badge { display:inline-block; margin-top:6px; padding:4px 8px; border-radius:999px; font-size:12px; background: rgba(0,0,0,0.06); color:var(--muted); }
+
+/* compact variant for small screens */
+@media (max-width:380px) {
+  .reaction-item { min-width:76px; max-width:96px; padding:6px; height:94px; }
+  .reaction-emoji { font-size:28px; }
+  .reaction-label { font-size:12px; }
+}
+
+/* textarea comment for review */
+#reviewComment { width:100%; min-height:72px; padding:8px; border-radius:10px; border:1px solid #eee; resize:vertical; }
+
+/* === Tag modal specifics === */
+.tag-list { display:flex; flex-wrap:wrap; gap:8px; max-height:40vh; overflow:auto; padding:8px 2px; }
+.tag-list .tag { cursor:pointer; padding:8px 12px; border-radius:999px; border:1px solid rgba(0,0,0,0.06); background: transparent; color: var(--text); transition: transform .08s ease, background .12s ease; font-weight:600; }
+.tag-list .tag:hover { transform: translateY(-2px); }
+.tag-list .tag.selected { background: linear-gradient(90deg,#2b6ff7,#2bcbf7); color:#fff; border-color: rgba(0,0,0,0.04); box-shadow: 0 8px 18px rgba(43,107,247,0.10); }
+
+/* input & add button in tag modal */
+#tagModalNewInput { padding:10px 12px; border-radius:10px; border:1px solid #e6e8ea; background:#fff; }
+#tagModalAdd { padding:9px 12px; border-radius:10px; }
+
+/* === Notification / incoming-invite compact style === */
+.incoming-invite .muted { color:var(--muted); font-size:14px; }
+.incoming-invite .btn.primary { min-width:100px; }
+.incoming-invite .btn { min-width:80px; }
+
+/* === Small helpers: icon / close button === */
+.modal-close, .modal-close-btn { position:absolute; right:10px; top:8px; border:none; background:transparent; font-size:22px; cursor:pointer; color:var(--muted); }
+.modal-close:focus { outline: 3px solid rgba(43,107,247,0.12); outline-offset: 2px; }
+
+/* === Prevent body scroll when modal open (add/remove class .modal-open on body) === */
+body.modal-open { overflow: hidden; touch-action: none; }
+
+/* === Visually distinct types (success/warn) for short messages inside modals === */
+.modal .notice-success { background: rgba(40,167,69,0.08); color: #216e36; padding:8px;border-radius:8px;margin-top:8px;border:1px solid rgba(40,167,69,0.12); }
+.modal .notice-warn { background: rgba(255,193,7,0.06); color: #6b4c00; padding:8px;border-radius:8px;margin-top:8px;border:1px solid rgba(255,193,7,0.12); }
+
+/* === Fine adjustments: reduce max width for very narrow screens === */
+@media (max-width:360px) {
+  .modal-card, .modal-content, .modal-window { padding:12px; border-radius:10px; }
+  .modal-actions { gap:8px; }
+}
+
+
+/* Invite modal — input styling matching main design */
+.modal-window.invite-modal {
+  width: 480px;
+  max-width: calc(100% - 36px);
+  padding: 18px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--card), #fbfbfb);
+  box-shadow: 0 20px 44px rgba(15,12,10,0.08);
+  color: var(--text);
+}
+
+/* general row / field wrapper */
+.invite-modal .invite-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.invite-modal .invite-row.full { flex-direction: column; align-items: stretch; }
+
+/* label small helper */
+.invite-modal label {
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text);
+  margin-bottom:6px;
+}
+
+/* unified input style */
+.invite-modal .invite-field,
+.invite-modal input[type="datetime-local"],
+.invite-modal input[type="text"],
+.invite-modal select,
+.invite-modal textarea {
+  width:100%;
+  background: #fff;
+  border: 1px solid rgba(15,12,10,0.06);
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(12,10,8,0.03);
+  font-size:14px;
+  color: var(--text);
+  transition: box-shadow .14s ease, border-color .12s ease, transform .08s ease;
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+/* subtle inner accent on focus */
+.invite-modal input:focus,
+.invite-modal select:focus,
+.invite-modal textarea:focus,
+.invite-modal .invite-field:focus {
+  border-color: rgba(235,76,55,0.22);
+  box-shadow: 0 10px 30px rgba(235,76,55,0.06);
+}
+
+/* datetime-specific tuning — keep native control but prettier container */
+.invite-modal input[type="datetime-local"] {
+  padding-right: 40px;
+  position: relative;
+  line-height: 1.3;
+}
+
+/* custom caret for select (simple CSS caret using gradient) */
+.invite-modal select {
+  padding-right: 40px;
+  /* background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%),
+    linear-gradient(to right, rgba(0,0,0,0.02), rgba(0,0,0,0.02)); */
+  background-position:
+    calc(100% - 18px) calc(50% - 6px),
+    calc(100% - 12px) calc(50% - 6px),
+    calc(100% - 36px) 50%;
+  background-size: 8px 8px, 8px 8px, 1px 36px;
+  background-repeat: no-repeat;
+}
+
+/* textarea: larger, resizable vertically */
+.invite-modal textarea {
+  min-height: 90px;
+  max-height: 240px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+/* pill-style radio options for meal choices */
+.invite-modal .meal-options {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.invite-modal .meal-options input[type="radio"] { display:none; }
+.invite-modal .meal-options label {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  border-radius: 999px;
+  cursor:pointer;
+  font-size:13px;
+  font-weight:600;
+  color: var(--muted);
+  background: linear-gradient(180deg, rgba(0,0,0,0.02), transparent);
+  border: 1px solid rgba(0,0,0,0.04);
+  transition: transform .08s ease, box-shadow .12s ease, color .12s ease, background .12s ease;
+}
+.invite-modal .meal-options label:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.06); }
+.invite-modal .meal-options input[type="radio"]:checked + label,
+.invite-modal .meal-options label.checked {
+  color: #fff;
+  background: linear-gradient(180deg, var(--accent), #d43b2a);
+  box-shadow: 0 8px 26px rgba(235,76,55,0.12);
+  border-color: rgba(235,76,55,0.18);
+}
+
+/* helper / hint text below input */
+.invite-modal .field-hint {
+  font-size:12px;
+  color:var(--muted);
+  margin-top:6px;
+}
+
+/* error state */
+.invite-modal .has-error input,
+.invite-modal .has-error textarea,
+.invite-modal .has-error select,
+.invite-modal .has-error .invite-field {
+  border-color: rgba(220,38,38,0.28);
+  box-shadow: 0 6px 18px rgba(220,38,38,0.05);
+}
+.invite-modal .error-text { color:#c0392b; font-size:12px; margin-top:6px; }
+
+/* actions: align and visual weight */
+.invite-modal .modal-actions { margin-top: 14px; display:flex; gap:10px; justify-content:flex-end; }
+.invite-modal .modal-actions .btn { padding:10px 14px; border-radius:10px; font-weight:700; }
+.invite-modal .modal-actions .btn.primary { min-width:110px; }
+
+/* small screens adjustments */
+@media (max-width:520px) {
+  .modal-window.invite-modal { width: calc(100% - 100px); padding:20px; border-radius:12px; }
+  .invite-modal .invite-row { flex-direction: column; align-items: stretch; }
+  .invite-modal .meal-options label { padding:8px 10px; font-size:13px; }
+}
+
+/* accessibility: keyboard focus visible outlines */
+.invite-modal .meal-options label:focus,
+.invite-modal input:focus,
+.invite-modal select:focus,
+.invite-modal textarea:focus {
+  outline: 3px solid rgba(43,107,247,0.10);
+  outline-offset: 3px;
+}

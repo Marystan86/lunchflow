@@ -1,0 +1,278 @@
+/* ====== "Иду кушать" ====== */
+
+.eat-hero {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: 28px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+
+.eat-circle {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  color: #fff;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 16px rgba(235, 76, 55, 0.3);
+}
+
+.eat-status {
+  font-size: 14px;
+  color: var(--text);
+  text-align: center;
+}
+.eat-status strong {
+  font-weight: 700;
+}
+
+/* секция с людьми рядом */
+.section-title {
+  margin: 12px 4px 14px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.nearby-count--spaced {
+  margin: 15px 0;
+}
+
+
+.nearby-cards {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 24px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.nearby-cards::-webkit-scrollbar {
+  height: 6px;
+}
+.nearby-cards::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+}
+
+/* карточка человека */
+.person-card {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  box-shadow: var(--shadow);
+  min-width: 230px;
+}
+
+.person-card.small {
+  min-width: 160px;
+  padding: 10px;
+}
+
+.avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.avatar-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--accent-weak);
+  flex-shrink: 0;
+}
+
+.p-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.p-name {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.p-age {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.p-tags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.p-tags span {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+
+.hidden { display: none !important; }
+
+
+.eat-circle {
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+}
+
+/* легкое нажатие */
+.eat-circle:active {
+  transform: scale(0.96);
+}
+
+/* состояние поиска (крутится / пульсит) */
+@keyframes eat-pulse {
+  0% { transform: scale(1); box-shadow: 0 6px 16px rgba(235,76,55,0.25); }
+  50% { transform: scale(1.06); box-shadow: 0 10px 26px rgba(235,76,55,0.30); }
+  100% { transform: scale(1); box-shadow: 0 6px 16px rgba(235,76,55,0.25); }
+}
+
+.eat-circle.searching::after {
+  content: "";
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(235,76,55,0.12);
+  animation: eat-spin 1.2s linear infinite;
+  pointer-events: none;
+}
+
+/* мягкий спин для кольца */
+@keyframes eat-spin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* состояние активной сессии - держим пульсацию */
+.eat-circle.active {
+  animation: eat-pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 14px 36px rgba(235,76,55,0.22);
+}
+
+/* когда скрываем старую geo-actions, пусть не ломает вёрстку */
+.geo-actions { display: none; }
+
+.eat-hint {
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  user-select: none;
+  transition: opacity 180ms ease, transform 180ms ease;
+  opacity: 1;
+}
+.eat-hint.hidden { opacity: 0; transform: translateY(-6px); pointer-events: none; }
+
+
+/* ----- радарные кольца ----- */
+.eat-circle {
+  position: relative;
+  overflow: visible;
+}
+
+/* отдельное кольцо */
+.radar-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%) scale(1);
+  border-radius: 50%;
+  border: 2px solid rgba(235,76,55,0.18);
+  box-sizing: border-box;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* настраиваемая длительность и задержка через CSS-переменные */
+  animation-name: radar-expand;
+  animation-duration: 2000ms;
+  animation-timing-function: cubic-bezier(.22,.9,.3,1);
+  animation-iteration-count: infinite;
+  animation-delay: var(--radar-delay, 0s);
+  opacity: 0;
+}
+
+/* тоновка центрального кольца (можно оставить более ярким) */
+.radar-ring.ring-0 { border-color: rgba(235,76,55,0.26); }
+.radar-ring.ring-1 { border-color: rgba(235,76,55,0.20); }
+.radar-ring.ring-2 { border-color: rgba(235,76,55,0.14); }
+
+@keyframes radar-expand {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.9;
+  }
+  60% {
+    opacity: 0.16;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* если want - переключатель видимости (класс searching уже используется) */
+.eat-circle.searching .radar-ring { display: block; }
+
+
+
+/* primary bottom call button (fixed center) */
+#callBtn {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 18px;
+  z-index: 13000;
+  min-width: 250px;
+  max-width: calc(100% - 32px);
+  width: 250px;
+  height: 56px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 20px;
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.16);
+  border: none;
+  cursor: pointer;
+  margin-bottom: 75px;
+}
+
+/* smaller screens */
+@media (max-width: 420px) {
+  #callBtn { width: calc(100% - 28px); left: 50%; transform: translateX(-50%); min-width: 0; height: 52px; }
+}
+
+/* accessible focus */
+#callBtn:focus { outline: 3px solid rgba(43,107,247,0.12); outline-offset: 3px; transform: translateX(-50%) scale(.995); }
