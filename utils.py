@@ -1,5 +1,4 @@
 # utils.py
-
 import math
 from fastapi import HTTPException
 from datetime import datetime, timedelta, timezone

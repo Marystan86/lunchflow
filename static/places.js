@@ -99,7 +99,8 @@ function showPlaceModal(place){
 }
 
 
-function renderStarsInline(r){
+function renderStarsInline(r)
+{
   const pct = Math.max(0, Math.min(5, r)) / 5 * 100;
   return `<div class="stars-outer"><div class="stars-inner" style="width:${pct}%">★★★★★</div><div class="stars-bg">★★★★★</div></div><span class="rating-num">${r}</span>`;
 }
