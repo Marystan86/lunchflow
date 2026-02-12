@@ -8,6 +8,8 @@ from app.config import DB_PATH
 from fastapi import FastAPI, Request
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
+from dotenv import load_dotenv
+load_dotenv()
 
 from routes import router as api_router
 from routes import survey_dispatcher_loop

@@ -1,5 +1,4 @@
 # routes.py
-
 import os
 import math
 import json
@@ -1146,14 +1145,6 @@ async def api_tags(limit: int = 100):
         rows = await cur.fetchall()
         tags = [{"tag": r["tag"], "count": r["cnt"]} for r in rows]
         return {"ok": True, "tags": tags}
-
-
-
-
-
-
-
-
 async def handle_review_from_survey(invite_id: int, reviewer_tg: int, reaction: str):
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
