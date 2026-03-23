@@ -157,7 +157,6 @@ async def admin_create_user(request: Request, x_admin_secret: str | None = Heade
         "instagram_handle": (body.get("instagram_handle") or "").strip(),
         "qr_url": (body.get("qr_url") or "").strip(),
     }
-    create_active_session = str(body.get("create_active_session", "")).strip().lower() in {"1", "true", "yes", "on"}
     tags_raw = body.get("tags")
     tags = []
     if isinstance(tags_raw, list):
@@ -166,22 +165,6 @@ async def admin_create_user(request: Request, x_admin_secret: str | None = Heade
         tags = [part.strip().lower() for part in tags_raw.replace("\n", ",").split(",") if part.strip()]
     # normalize tags
     tags = list(dict.fromkeys([t[:64] for t in tags]))
-
-    lat = lon = None
-    session_hours = 1.0
-    if create_active_session:
-        try:
-            lat = float(body.get("lat"))
-            lon = float(body.get("lon"))
-        except Exception:
-            raise HTTPException(status_code=400, detail="lat and lon are required when create_active_session=true")
-        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
-            raise HTTPException(status_code=400, detail="lat/lon out of range")
-        try:
-            session_hours = float(body.get("session_hours", 1.0))
-        except Exception:
-            session_hours = 1.0
-        session_hours = min(max(session_hours, 0.25), 24.0)
 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
@@ -264,23 +247,12 @@ async def admin_create_user(request: Request, x_admin_secret: str | None = Heade
             for tag in tags:
                 await db.execute("INSERT OR IGNORE INTO user_tags (user_id, tag) VALUES (?, ?)", (user_id, tag))
 
-        if create_active_session:
-            now = datetime.now(timezone.utc)
-            expires = now + timedelta(hours=session_hours)
-            now_s = now.strftime('%Y-%m-%d %H:%M:%S')
-            expires_s = expires.strftime('%Y-%m-%d %H:%M:%S')
-            await db.execute("UPDATE eat_sessions SET active = 0 WHERE user_id = ?", (user_id,))
-            await db.execute(
-                "INSERT INTO eat_sessions (user_id, lat, lon, started_at, expires_at, active) VALUES (?, ?, ?, ?, ?, 1)",
-                (user_id, lat, lon, now_s, expires_s),
-            )
         await db.commit()
 
     return {
         "ok": True,
         "user_id": user_id,
         "profile": profile,
-        "session_created": bool(create_active_session),
         "tags": tags,
     }
 

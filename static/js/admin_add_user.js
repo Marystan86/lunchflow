@@ -128,15 +128,6 @@
                 payload[key] = val(key);
             });
             payload.tags = val("tags");
-            payload.create_active_session = isChecked("create_active_session");
-            if (payload.create_active_session) {
-                payload.lat = Number(val("lat"));
-                payload.lon = Number(val("lon"));
-                payload.session_hours = Number(val("session_hours") || "1");
-                if (!Number.isFinite(payload.lat) || !Number.isFinite(payload.lon)) {
-                    throw new Error("lat/lon required when create_active_session is enabled");
-                }
-            }
 
             var response = await fetch("/admin/users", {
                 method: "POST",
@@ -154,9 +145,6 @@
             }
 
             var extra = "";
-            if (data.session_created) {
-                extra += " session=on;";
-            }
             if (Array.isArray(data.tags) && data.tags.length) {
                 extra += " tags=" + data.tags.join(",");
             }
