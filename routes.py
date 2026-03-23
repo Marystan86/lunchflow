@@ -81,7 +81,7 @@ async def index(request: Request):
             return FileResponse(static_index, media_type="text/html")
         raise HTTPException(status_code=404, detail="index.html not found")
     context = {"request": request}
-    return templates.TemplateResponse("index.html", context)
+    return templates.TemplateResponse(request=request, name="index.html", context=context)
 
 
 def _is_admin_authorized(candidate_secret: str | None) -> bool:
@@ -113,7 +113,11 @@ async def admin_add_user_page(request: Request, x_admin_secret: str | None = Hea
     # Optional protection for page view: enforce in non-dev when ADMIN_SECRET exists.
     if ADMIN_SECRET and not DEV_MODE:
         _require_admin(x_admin_secret or admin_secret)
-    return templates.TemplateResponse("admin_add_user.html", {"request": request})
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_add_user.html",
+        context={"request": request},
+    )
 
 
 @router.post("/admin/users")
@@ -446,7 +450,7 @@ async def get_screen_with_ext(request: Request, name: str):
     """Рендерит templates/screens/<name>.html через Jinja2."""
     tmpl = safe_screen_template(name, SCREENS_TEMPLATES_DIR)
     context = {"request": request}
-    return templates.TemplateResponse(tmpl, context)
+    return templates.TemplateResponse(request=request, name=tmpl, context=context)
 
 
 
