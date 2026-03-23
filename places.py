@@ -58,7 +58,11 @@ def safe_avatar_url(url):
 def places_router(router, DB_PATH, templates):
     @router.get("/places")
     async def places_page(request: Request):
-        return templates.TemplateResponse("places.html", {"request": request})
+        return templates.TemplateResponse(
+            request=request,
+            name="places.html",
+            context={"request": request},
+        )
 
     @router.get("/api/places")
     async def api_get_places(limit: int = 50, category: str = None):
