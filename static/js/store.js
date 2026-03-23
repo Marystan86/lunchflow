@@ -309,7 +309,7 @@ async function loadStoreData() {
     fetch("/api/store/products", { cache: "no-store" }),
   ]);
 
-  let summaryPayload = { points: Number(storeState.points || 120), level: storeState.level || "Активный", purchases: [] };
+  let summaryPayload = { points: 0, level: "Старт", purchases: [] };
   try {
     const summaryResponse = await apiRequest("/api/store/summary", { method: "GET" });
     if (summaryResponse.ok) {

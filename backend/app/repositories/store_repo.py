@@ -9,6 +9,7 @@ async def list_categories(db: aiosqlite.Connection) -> list[dict]:
         SELECT id, slug, title, sort_order, is_active
         FROM store_categories
         WHERE is_active = 1
+          AND slug != 'all'
         ORDER BY sort_order ASC, id ASC
         """
     )
