@@ -1,10 +1,50 @@
-<section class="screen map">
-    <div class="screen-header">
-        <h2>Карта</h2>
-    </div>
+<section class="screen store-screen">
+  <header class="store-header">
+    <h1 class="store-title">Магазин</h1>
+    <p class="store-subtitle">Обменивай баллы на награды</p>
+  </header>
 
-    <div class="dev-card">
-        <button class="dev-btn">В разработке!</button>
-        <p>Карта еще в разработке,<br>и скоро будет готова!</p>
+  <section class="store-summary">
+    <div class="store-points-wrap">
+      <p class="store-points-label">Ваши баллы</p>
+      <p id="storePointsValue" class="store-points-value">120</p>
     </div>
+    <div class="store-level-badge">Уровень: Активный</div>
+    <button id="openPurchasesBtn" class="store-purchases-btn" type="button">Мои покупки</button>
+  </section>
+
+  <section class="store-section">
+    <h2 class="store-section-title">Категории</h2>
+    <div id="storeCategoryChips" class="store-chips"></div>
+  </section>
+
+  <section class="store-section">
+    <h2 class="store-section-title">Товары</h2>
+    <div id="storeItemsList" class="store-items-list"></div>
+  </section>
 </section>
+
+<div id="storeConfirmModal" class="store-modal hidden" aria-hidden="true">
+  <div class="store-modal-overlay"></div>
+  <div class="store-modal-card" role="dialog" aria-modal="true" aria-labelledby="storeConfirmTitle">
+    <h3 id="storeConfirmTitle" class="store-modal-title">Подтвердить обмен?</h3>
+    <p id="storeConfirmText" class="store-modal-text"></p>
+    <div class="store-modal-actions">
+      <button id="storeConfirmCancelBtn" class="store-btn-secondary" type="button">Отмена</button>
+      <button id="storeConfirmSubmitBtn" class="store-btn-primary" type="button">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
+<div id="storePurchasesModal" class="store-modal hidden" aria-hidden="true">
+  <div class="store-modal-overlay"></div>
+  <div class="store-modal-card" role="dialog" aria-modal="true" aria-labelledby="storePurchasesTitle">
+    <h3 id="storePurchasesTitle" class="store-modal-title">Мои покупки</h3>
+    <div id="storePurchasesList" class="store-purchases-list"></div>
+    <div class="store-modal-actions">
+      <button id="storePurchasesCloseBtn" class="store-btn-secondary" type="button">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<div id="storeToast" class="store-toast hidden" aria-live="polite"></div>

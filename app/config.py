@@ -10,3 +10,5 @@ load_dotenv(dotenv_path=env_path)
 DB_PATH = os.getenv("DB_PATH", "db.sqlite3")
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 SERVER_BASE_URL = os.getenv("SERVER_BASE_URL", "")
+ADMIN_SECRET = os.getenv("ADMIN_SECRET", "").strip()
+DEV_MODE = os.getenv("DEV_MODE", "0").strip().lower() in {"1", "true", "yes", "on"}

@@ -1,24 +1,146 @@
-<!-- static/screens/feed.html -->
+﻿<section class="screen feed lightning-screen">
+  <header class="lightning-header">
+    <h1 class="lightning-title">Запросы и встречи</h1>
+    <p class="lightning-subtitle">Личные и групповые форматы Клуба</p>
+  </header>
 
-    <section class="screen feed">
-    <header class="screen-header">
-        <h2>Иду кушать</h2>
-    </header>
+  <section class="lightning-section">
+    <h2 class="lightning-section-title">Мои запросы 1-на-1</h2>
+    <div id="outgoingRequestsList" class="lightning-cards"></div>
+  </section>
 
-    <div class="eat-hero">
-        <div id="eatCircle" class="eat-circle" role="button" tabindex="0" aria-pressed="false" aria-label="Найти людей рядом">🍽️</div>
+  <section class="lightning-section">
+    <h2 class="lightning-section-title">Входящие запросы 1-на-1</h2>
+    <div id="incomingRequestsList" class="lightning-cards"></div>
+  </section>
 
-        <!-- подсказка -->
-        <div id="eatHint" class="eat-hint">Нажми на кнопку, чтобы найти людей рядом</div>
-
-        <div id="eatStatus" class="eat-status hidden">
-            Геолокация активна на <strong id="eatStatusTimer">59:59</strong>
-        </div>
+  <section class="lightning-section">
+    <div class="lightning-section-head">
+      <h2 class="lightning-section-title">Групповые встречи</h2>
+      <button id="openCreateGroupEventBtn" class="btn-primary lightning-create-btn" type="button">Создать групповую встречу</button>
     </div>
+    <div id="groupMeetupsList" class="lightning-cards"></div>
+  </section>
 
-    <h4 id="nearbyCount" class="section-title">Рядом - 0 человек готовы обедать</h4>
-
-    <div id="nearbyCards" class="nearby-cards">
-        <!-- JS будет заполнять person-card'ы сюда -->
-    </div>
+  <section class="lightning-section">
+    <h2 class="lightning-section-title">Ивенты от клуба</h2>
+    <div id="clubEventsList" class="lightning-cards"></div>
+  </section>
 </section>
+
+<div id="rescheduleSheet" class="reschedule-sheet hidden" aria-hidden="true">
+  <div class="reschedule-backdrop"></div>
+  <div class="reschedule-panel reschedule-dialog-panel" role="dialog" aria-modal="true" aria-labelledby="rescheduleTitle">
+    <h3 id="rescheduleTitle">Предложить другое время</h3>
+    <p id="rescheduleSubtitle" class="reschedule-subtitle">Выберите удобный слот для встречи</p>
+
+    <div class="reschedule-suggestions-wrap">
+      <p class="reschedule-label">Быстрые варианты</p>
+      <div id="rescheduleSuggestions" class="reschedule-suggestions"></div>
+    </div>
+
+    <div class="reschedule-divider">
+      <span>Или предложить свой слот</span>
+    </div>
+
+    <div class="reschedule-row">
+      <div class="reschedule-field">
+        <label class="reschedule-label" for="rescheduleDate">Дата</label>
+        <input id="rescheduleDate" class="reschedule-input" type="date">
+      </div>
+      <div class="reschedule-field">
+        <label class="reschedule-label" for="rescheduleTime">Время</label>
+        <input id="rescheduleTime" class="reschedule-input" type="time" step="900">
+      </div>
+    </div>
+
+    <label class="reschedule-label" for="rescheduleNote">Комментарий (необязательно)</label>
+    <textarea id="rescheduleNote" class="reschedule-input" rows="3" placeholder="Коротко уточните, почему это время вам подходит"></textarea>
+    <div class="reschedule-actions">
+      <button id="rescheduleCancelBtn" class="btn-secondary" type="button">Отмена</button>
+      <button id="rescheduleSubmitBtn" class="btn-primary" type="button">Отправить</button>
+    </div>
+  </div>
+</div>
+
+<div id="lightningToast" class="lightning-toast hidden" aria-live="polite"></div>
+
+<div id="createGroupEventModal" class="reschedule-sheet create-event-modal hidden" aria-hidden="true">
+  <div class="reschedule-backdrop"></div>
+  <div class="reschedule-panel create-event-panel" role="dialog" aria-modal="true" aria-labelledby="createGroupEventTitle">
+    <h3 id="createGroupEventTitle">Создать групповую встречу</h3>
+
+    <div class="create-event-form">
+      <div class="create-event-field">
+        <label class="reschedule-label" for="eventTitleInput">Название</label>
+        <input id="eventTitleInput" class="reschedule-input" type="text" maxlength="120" />
+      </div>
+
+      <div class="create-event-field">
+        <label class="reschedule-label" for="eventDescriptionInput">Описание</label>
+        <textarea id="eventDescriptionInput" class="reschedule-input" rows="3"></textarea>
+      </div>
+
+      <div class="create-event-row">
+        <div class="create-event-field">
+          <label class="reschedule-label" for="eventStartsAtInput">Дата и время</label>
+          <input id="eventStartsAtInput" class="reschedule-input" type="datetime-local" />
+        </div>
+        <div class="create-event-field">
+          <label class="reschedule-label" for="eventFormatSelect">Формат</label>
+          <select id="eventFormatSelect" class="reschedule-input">
+            <option value="online">Онлайн</option>
+            <option value="offline">Оффлайн</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="eventOfflineFields" class="create-event-row">
+        <div class="create-event-field">
+          <label class="reschedule-label" for="eventCitySelect">Город (для оффлайн)</label>
+          <select id="eventCitySelect" class="reschedule-input">
+            <option value="">Не выбрано</option>
+            <option value="Алматы">Алматы</option>
+            <option value="Астана">Астана</option>
+            <option value="Шымкент">Шымкент</option>
+            <option value="Караганда">Караганда</option>
+            <option value="Другое">Другое</option>
+          </select>
+        </div>
+        <div class="create-event-field">
+          <label class="reschedule-label" for="eventLocationInput">Локация / место</label>
+          <input id="eventLocationInput" class="reschedule-input" type="text" maxlength="140" />
+        </div>
+      </div>
+
+      <div id="eventOfflineHint" class="create-event-hint hidden">Для оффлайн встречи выберите город</div>
+
+      <div class="create-event-field">
+        <label class="reschedule-label" for="eventCapacityInput">Лимит мест</label>
+        <input id="eventCapacityInput" class="reschedule-input" type="number" min="2" max="200" value="6" />
+      </div>
+
+      <div class="create-event-field">
+        <label class="reschedule-label">Категория</label>
+        <div id="eventCategoryChips" class="event-category-chips">
+          <button type="button" class="request-chip event-category-chip" data-category="Нетворкинг">Нетворкинг</button>
+          <button type="button" class="request-chip event-category-chip" data-category="Мастермайнд">Мастермайнд</button>
+          <button type="button" class="request-chip event-category-chip" data-category="Продукт">Продукт</button>
+          <button type="button" class="request-chip event-category-chip" data-category="Инвесторы">Инвесторы</button>
+          <button type="button" class="request-chip event-category-chip" data-category="Маркетинг">Маркетинг</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="reschedule-actions create-event-actions">
+      <button id="createGroupEventCancelBtn" class="btn-secondary" type="button">Отмена</button>
+      <button id="createGroupEventSubmitBtn" class="btn-primary" type="button">Создать</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+

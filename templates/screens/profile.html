@@ -1,51 +1,5 @@
-<!-- templates/screens/profile.html -->
-
-<section class="screen profile">
-    <header class="screen-header">
-        <h2>Мой профиль</h2>
-    </header>
-
-    <div class="profile-card">
-        <div class="profile-top">
-            <img id="profileAvatar" class="avatar-lg" src="/static/images/default_avatar.svg" alt="Avatar"/>
-            <div class="profile-info">
-                <div id="profileName" class="name">Имя</div>
-                <div id="profileUsername" class="username">@username</div>
-                <div id="profileAge" class="age">-</div>
-                <div id="profileGeo" class="geo">Геолокация отключена</div>
-            </div>
-            <button id="profileSettings" class="settings-btn" title="Редактировать профиль">⚙</button>
-        </div>
-
-        <!-- <h4 class="section-title">Мои интересы</h4> -->
-        <div id="tagsPanel" class="tags-panel">
-            <!-- теги отрисовываются JS -->
-            <button class="tag outline">Добавить +</button>
-        </div>
-
-        <h4 class="section-title">Люди, с которыми вы пересекались</h4>
-        <div id="meetList" class="meet-list">
-            <!-- JS заполнит реальные профили (recent_contacts) -->
-        </div>
-    </div>
-
-    <!-- Tag modal -->
-    <div id="tagModal" class="modal hidden" aria-hidden="true">
-        <div class="modal-overlay"></div>
-        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="tagModalTitle">
-            <div class="modal-header">
-                <div>
-                    <div id="tagModalTitle" class="m-title">Выбор интересов</div>
-                    <div id="tagModalSubtitle" class="m-sub">Выбери теги, которые вам интересны</div>
-                </div>
-            </div>
-
-            <div id="tagModalList" class="tag-list"></div>
-
-            <div class="modal-actions">
-                <button id="tagModalCancel" class="btn outline" type="button">Отмена</button>
-                <button id="tagModalSave" class="btn primary" type="button">Сохранить</button>
-            </div>
-        </div>
+<section class="screen profile profile-modern">
+    <div id="profileScreenRoot" class="profile-screen-root">
+        <div class="profile-loading-card">Загрузка профиля...</div>
     </div>
 </section>

@@ -11,9 +11,9 @@ from urllib.parse import parse_qsl
 from fastapi.responses import FileResponse
 from fastapi.templating import Jinja2Templates
 from datetime import datetime, timedelta, timezone
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Header
 
-from app.config import BOT_TOKEN, DB_PATH
+from app.config import BOT_TOKEN, DB_PATH, ADMIN_SECRET, DEV_MODE
 from app.invites import handle_invite_response
 from app.telegram_utils import answer_callback_query, dispatch_surveys_once, edit_message_reply_markup, edit_message_text, send_telegram_message
 from places import safe_avatar_url, places_router
@@ -84,6 +84,255 @@ async def index(request: Request):
     return templates.TemplateResponse("index.html", context)
 
 
+def _is_admin_authorized(candidate_secret: str | None) -> bool:
+    if ADMIN_SECRET:
+        return hmac.compare_digest(candidate_secret or "", ADMIN_SECRET)
+    return DEV_MODE
+
+
+def _require_admin(candidate_secret: str | None) -> None:
+    if _is_admin_authorized(candidate_secret):
+        return
+    if ADMIN_SECRET:
+        raise HTTPException(status_code=401, detail="invalid admin secret")
+    raise HTTPException(status_code=403, detail="admin access disabled: set ADMIN_SECRET or DEV_MODE=1")
+
+
+async def _next_temp_tg_id(db: aiosqlite.Connection) -> int:
+    candidate = -int(datetime.now(timezone.utc).timestamp() * 1000)
+    for _ in range(1000):
+        cur = await db.execute("SELECT 1 FROM users WHERE tg_id = ? LIMIT 1", (candidate,))
+        if await cur.fetchone() is None:
+            return candidate
+        candidate -= 1
+    raise HTTPException(status_code=500, detail="failed to allocate temporary tg_id")
+
+
+@router.get("/admin/add-user")
+async def admin_add_user_page(request: Request, x_admin_secret: str | None = Header(default=None), admin_secret: str | None = None):
+    # Optional protection for page view: enforce in non-dev when ADMIN_SECRET exists.
+    if ADMIN_SECRET and not DEV_MODE:
+        _require_admin(x_admin_secret or admin_secret)
+    return templates.TemplateResponse("admin_add_user.html", {"request": request})
+
+
+@router.post("/admin/users")
+async def admin_create_user(request: Request, x_admin_secret: str | None = Header(default=None)):
+    _require_admin(x_admin_secret)
+
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(status_code=400, detail="json body required")
+
+    tg_id_raw = body.get("tg_id")
+    username = (body.get("username") or "").strip()
+    if username.startswith("@"):
+        username = username[1:]
+
+    if tg_id_raw in (None, "") and not username:
+        raise HTTPException(status_code=400, detail="at least one identifier required: tg_id or username")
+
+    tg_id = None
+    if tg_id_raw not in (None, ""):
+        try:
+            tg_id = int(tg_id_raw)
+        except Exception:
+            raise HTTPException(status_code=400, detail="tg_id must be an integer")
+
+    profile = {
+        "full_name": (body.get("full_name") or "").strip(),
+        "title": (body.get("title") or "").strip(),
+        "services": (body.get("services") or "").strip(),
+        "monthly_turnover_range": (body.get("monthly_turnover_range") or "").strip(),
+        "yearly_turnover_range": (body.get("yearly_turnover_range") or "").strip(),
+        "team_size": (body.get("team_size") or "").strip(),
+        "key_competencies": (body.get("key_competencies") or "").strip(),
+        "club_audience_request": (body.get("club_audience_request") or "").strip(),
+        "hobbies": (body.get("hobbies") or "").strip(),
+        "help_topics": (body.get("help_topics") or "").strip(),
+        "instagram_handle": (body.get("instagram_handle") or "").strip(),
+        "qr_url": (body.get("qr_url") or "").strip(),
+    }
+    create_active_session = str(body.get("create_active_session", "")).strip().lower() in {"1", "true", "yes", "on"}
+    tags_raw = body.get("tags")
+    tags = []
+    if isinstance(tags_raw, list):
+        tags = [str(t).strip().lower() for t in tags_raw if str(t).strip()]
+    elif isinstance(tags_raw, str):
+        tags = [part.strip().lower() for part in tags_raw.replace("\n", ",").split(",") if part.strip()]
+    # normalize tags
+    tags = list(dict.fromkeys([t[:64] for t in tags]))
+
+    lat = lon = None
+    session_hours = 1.0
+    if create_active_session:
+        try:
+            lat = float(body.get("lat"))
+            lon = float(body.get("lon"))
+        except Exception:
+            raise HTTPException(status_code=400, detail="lat and lon are required when create_active_session=true")
+        if not (-90.0 <= lat <= 90.0 and -180.0 <= lon <= 180.0):
+            raise HTTPException(status_code=400, detail="lat/lon out of range")
+        try:
+            session_hours = float(body.get("session_hours", 1.0))
+        except Exception:
+            session_hours = 1.0
+        session_hours = min(max(session_hours, 0.25), 24.0)
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+
+        user_row = None
+        if tg_id is not None:
+            cur = await db.execute("SELECT id FROM users WHERE tg_id = ?", (tg_id,))
+            user_row = await cur.fetchone()
+        if user_row is None and username:
+            cur = await db.execute("SELECT id FROM users WHERE username = ?", (username,))
+            user_row = await cur.fetchone()
+
+        if user_row is None:
+            final_tg_id = tg_id if tg_id is not None else await _next_temp_tg_id(db)
+            cur = await db.execute(
+                "INSERT INTO users (tg_id, username, name, created_at, updated_at) VALUES (?, ?, ?, datetime('now'), datetime('now'))",
+                (final_tg_id, username or None, profile["full_name"] or None),
+            )
+            user_id = cur.lastrowid
+        else:
+            user_id = user_row["id"]
+            updates = []
+            params = []
+            if tg_id is not None:
+                updates.append("tg_id = ?")
+                params.append(tg_id)
+            if username:
+                updates.append("username = ?")
+                params.append(username)
+            if profile["full_name"]:
+                updates.append("name = ?")
+                params.append(profile["full_name"])
+            if updates:
+                params.append(user_id)
+                await db.execute(
+                    f"UPDATE users SET {', '.join(updates)}, updated_at = datetime('now') WHERE id = ?",
+                    tuple(params),
+                )
+
+        await db.execute(
+            """
+            INSERT INTO profiles (
+                user_id, full_name, title, services, monthly_turnover_range, yearly_turnover_range, team_size,
+                key_competencies, club_audience_request, hobbies, help_topics, instagram_handle, qr_url, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+            ON CONFLICT(user_id) DO UPDATE SET
+                full_name = excluded.full_name,
+                title = excluded.title,
+                services = excluded.services,
+                monthly_turnover_range = excluded.monthly_turnover_range,
+                yearly_turnover_range = excluded.yearly_turnover_range,
+                team_size = excluded.team_size,
+                key_competencies = excluded.key_competencies,
+                club_audience_request = excluded.club_audience_request,
+                hobbies = excluded.hobbies,
+                help_topics = excluded.help_topics,
+                instagram_handle = excluded.instagram_handle,
+                qr_url = excluded.qr_url
+            """,
+            (
+                user_id,
+                profile["full_name"] or None,
+                profile["title"] or None,
+                profile["services"] or None,
+                profile["monthly_turnover_range"] or None,
+                profile["yearly_turnover_range"] or None,
+                profile["team_size"] or None,
+                profile["key_competencies"] or None,
+                profile["club_audience_request"] or None,
+                profile["hobbies"] or None,
+                profile["help_topics"] or None,
+                profile["instagram_handle"] or None,
+                profile["qr_url"] or None,
+            ),
+        )
+
+        if tags:
+            await db.execute("DELETE FROM user_tags WHERE user_id = ?", (user_id,))
+            for tag in tags:
+                await db.execute("INSERT OR IGNORE INTO user_tags (user_id, tag) VALUES (?, ?)", (user_id, tag))
+
+        if create_active_session:
+            now = datetime.now(timezone.utc)
+            expires = now + timedelta(hours=session_hours)
+            now_s = now.strftime('%Y-%m-%d %H:%M:%S')
+            expires_s = expires.strftime('%Y-%m-%d %H:%M:%S')
+            await db.execute("UPDATE eat_sessions SET active = 0 WHERE user_id = ?", (user_id,))
+            await db.execute(
+                "INSERT INTO eat_sessions (user_id, lat, lon, started_at, expires_at, active) VALUES (?, ?, ?, ?, ?, 1)",
+                (user_id, lat, lon, now_s, expires_s),
+            )
+        await db.commit()
+
+    return {
+        "ok": True,
+        "user_id": user_id,
+        "profile": profile,
+        "session_created": bool(create_active_session),
+        "tags": tags,
+    }
+
+
+@router.get("/admin/users/{id}")
+async def admin_get_user(id: int, x_admin_secret: str | None = Header(default=None)):
+    _require_admin(x_admin_secret)
+
+    async with aiosqlite.connect(DB_PATH) as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute(
+            """
+            SELECT
+                u.id AS user_id, u.tg_id, u.username, u.name, u.avatar, u.created_at AS user_created_at,
+                p.full_name, p.title, p.services, p.monthly_turnover_range, p.yearly_turnover_range, p.team_size,
+                p.key_competencies, p.club_audience_request, p.hobbies, p.help_topics, p.instagram_handle, p.qr_url,
+                p.created_at AS profile_created_at
+            FROM users u
+            LEFT JOIN profiles p ON p.user_id = u.id
+            WHERE u.id = ?
+            """,
+            (id,),
+        )
+        row = await cur.fetchone()
+
+    if row is None:
+        raise HTTPException(status_code=404, detail="user not found")
+
+    return {
+        "ok": True,
+        "user": {
+            "id": row["user_id"],
+            "tg_id": row["tg_id"],
+            "username": row["username"],
+            "name": row["name"],
+            "avatar": row["avatar"],
+            "created_at": row["user_created_at"],
+        },
+        "profile": {
+            "full_name": row["full_name"],
+            "title": row["title"],
+            "services": row["services"],
+            "monthly_turnover_range": row["monthly_turnover_range"],
+            "yearly_turnover_range": row["yearly_turnover_range"],
+            "team_size": row["team_size"],
+            "key_competencies": row["key_competencies"],
+            "club_audience_request": row["club_audience_request"],
+            "hobbies": row["hobbies"],
+            "help_topics": row["help_topics"],
+            "instagram_handle": row["instagram_handle"],
+            "qr_url": row["qr_url"],
+            "created_at": row["profile_created_at"],
+        },
+    }
+
+
 @router.post("/start")
 async def start_session(request: Request):
     data = await request.json()
@@ -146,46 +395,43 @@ async def stop_session(request: Request):
 
 
 @router.get("/nearby")
-async def nearby(tg_id: int, lat: float, lon: float, radius_km: float = 3.0, max_rows: int = 100):
-    lat_deg = radius_km / 111.0
-    lon_deg = radius_km / (111.0 * max(0.00001, math.cos(math.radians(lat))))
-    min_lat, max_lat = lat - lat_deg, lat + lat_deg
-    min_lon, max_lon = lon - lon_deg, lon + lon_deg
-
+async def nearby(tg_id: int, lat: float | None = None, lon: float | None = None, radius_km: float = 3.0, max_rows: int = 100):
     now_s = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     items = []
 
     async with aiosqlite.connect(DB_PATH) as db:
         db.row_factory = aiosqlite.Row
         q = """
-            SELECT e.id AS sid, e.lat, e.lon, e.started_at, e.expires_at, u.id AS user_id, u.tg_id,
-                   u.name AS name, u.avatar AS avatar, u.username AS username, u.age AS age
-            FROM eat_sessions e
-            JOIN users u ON u.id = e.user_id
-            WHERE e.active = 1 AND e.expires_at > ?
-              AND e.lat BETWEEN ? AND ?
-              AND e.lon BETWEEN ? AND ?
+            SELECT
+                u.id AS user_id, u.tg_id, u.name, u.avatar, u.username, u.age,
+                e.lat, e.lon, e.started_at, e.expires_at
+            FROM users u
+            LEFT JOIN eat_sessions e
+                ON e.user_id = u.id
+               AND e.active = 1
+               AND e.expires_at > ?
+            WHERE u.tg_id != ?
+            ORDER BY u.created_at DESC
             LIMIT ?
         """
-        cur = await db.execute(q, (now_s, min_lat, max_lat, min_lon, max_lon, max_rows))
+        cur = await db.execute(q, (now_s, tg_id, max_rows))
         rows = await cur.fetchall()
         for r in rows:
-            if r["tg_id"] == tg_id:
-                continue
-            d = haversine_km(lat, lon, r["lat"], r["lon"])
-            if d <= radius_km:
-                items.append({
-                    "user_id": r["user_id"],
-                    "tg_id": r["tg_id"],
-                    "name": r["name"],
-                    "username": r["username"],
-                    "avatar": safe_avatar_url(r["avatar"]),
-                    "age": r["age"],
-                    "distance_km": round(d, 3),
-                    "started_at": r["started_at"],
-                    "expires_at": r["expires_at"],
-                })
-    items.sort(key=lambda x: x["distance_km"])
+            distance_km = None
+            if lat is not None and lon is not None and r["lat"] is not None and r["lon"] is not None:
+                distance_km = round(haversine_km(lat, lon, r["lat"], r["lon"]), 3)
+            items.append({
+                "user_id": r["user_id"],
+                "tg_id": r["tg_id"],
+                "name": r["name"],
+                "username": r["username"],
+                "avatar": safe_avatar_url(r["avatar"]),
+                "age": r["age"],
+                "distance_km": distance_km,
+                "started_at": r["started_at"],
+                "expires_at": r["expires_at"],
+            })
+    items.sort(key=lambda x: (x["distance_km"] is None, x["distance_km"] if x["distance_km"] is not None else 10**9))
     return {"nearby": items}
 
 
@@ -1071,14 +1317,12 @@ async def api_users_similar(tg_id: int, limit: int = 10):
         user_tags = [r["tag"] for r in await cur.fetchall()]
 
         if not user_tags:
-            # fallback: вернём последние активные контакты (как в profile)
+            # fallback: вернём последних пользователей без зависимости от eat_sessions
             cur = await db.execute("""
-                SELECT u.tg_id, u.name, u.avatar, u.username, u.age, max(e.started_at) AS last_seen
+                SELECT u.tg_id, u.name, u.avatar, u.username, u.age, u.created_at AS last_seen
                 FROM users u
-                JOIN eat_sessions e ON e.user_id = u.id
                 WHERE u.id != ?
-                GROUP BY u.id
-                ORDER BY last_seen DESC
+                ORDER BY u.created_at DESC
                 LIMIT ?
             """, (user_id, limit))
             rows = await cur.fetchall()

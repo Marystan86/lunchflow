@@ -20,6 +20,51 @@ import {
 } from './geo-and-session.js';
 
 import {loadPlacesIntoHome} from "./places.js";
+import { initCommunityScreen } from "./js/community.js?v=20260315b";
+import { initHomeFeed } from "./js/home-feed.js";
+import { initLightningHub } from "./js/lightning-hub.js";
+import { initProfileEditScreen, initProfileScreen } from "./js/profile-screen.js?v=20260315c";
+import { initStoreScreen } from "./js/store.js";
+
+function renderCommunityFallback() {
+    const list = document.getElementById("communityList");
+    if (!list) return;
+    if (list.children.length > 0) return;
+
+    const roles = ["Активный участник", "Ментор", "Ядро клуба"];
+    const names = [
+        "Айдар Беков", "Алина Сейтова", "Нурсултан Ибраев", "Мария Касенова", "Ерлан Турсынов",
+        "Дана Жумабаева", "Ильяс Нургалиев", "София Каримова", "Роман Абдрахманов", "Вера Ахметова",
+        "Тимур Смагулов", "Мадина Ермекова", "Арсен Кожахмет", "Елена Рахимова", "Куат Оспанов",
+        "Кира Жакупова", "Леонид Кравцов", "Надежда Садыкова", "Аян Кенжебаев", "Айгерим Нурланова"
+    ];
+    const badges = ["⚡", "🏆", "🤝", "🚀", "💡", "📈"];
+    const gradients = [
+        "linear-gradient(145deg,#704a19,#d5a14e)",
+        "linear-gradient(145deg,#3c2d56,#aa7a3f)",
+        "linear-gradient(145deg,#204553,#b68a47)",
+        "linear-gradient(145deg,#4a2938,#c99856)",
+        "linear-gradient(145deg,#2b355f,#c38b3f)"
+    ];
+
+    const initials = (n) => n.split(" ").filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("");
+    list.innerHTML = "";
+    names.forEach((name, i) => {
+        const card = document.createElement("article");
+        card.className = "community-card";
+        card.innerHTML = `
+            <div class="community-avatar" style="background:${gradients[i % gradients.length]}">${escapeHtml(initials(name))}</div>
+            <h3 class="community-name">${escapeHtml(name)}</h3>
+            <p class="community-role">${roles[i % roles.length]}</p>
+            <div class="community-badges">
+                <span class="community-badge">${badges[i % badges.length]}</span>
+                <span class="community-badge">${badges[(i + 2) % badges.length]}</span>
+            </div>
+        `;
+        card.addEventListener("click", () => alert("Профиль участника"));
+        list.appendChild(card);
+    });
+}
 
 
 async function fetchPlacesApi(limit = 10) {
@@ -632,6 +677,94 @@ function insertAfter(refNode, newNode) {
     refNode.parentNode.insertBefore(newNode, refNode.nextSibling);
 }
 
+function readSessionJson(key) {
+    try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) return null;
+        return JSON.parse(raw);
+    } catch (e) {
+        console.warn(`sessionStorage read failed for ${key}`, e);
+        return null;
+    }
+}
+
+function firstMeaningfulMetric(...values) {
+    for (const value of values) {
+        if (value === undefined || value === null || value === "") continue;
+        const normalized = typeof value === "string" ? value.trim() : value;
+        if (normalized === "") continue;
+        return normalized;
+    }
+    return null;
+}
+
+function formatActivityMetric(value) {
+    if (value === undefined || value === null || value === "") {
+        return { text: "—", empty: true };
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return { text: String(value), empty: false };
+    }
+
+    const raw = String(value).trim();
+    if (!raw) return { text: "—", empty: true };
+
+    const digitsOnly = raw.replace(/[^\d.-]/g, "");
+    const parsed = Number(digitsOnly);
+    if (digitsOnly && Number.isFinite(parsed)) {
+        return { text: String(parsed), empty: false };
+    }
+
+    return { text: raw, empty: false };
+}
+
+function renderActivityIcon(kind) {
+    const common = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+
+    if (kind === "one_on_one") {
+        return `<svg ${common} aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3"/><path d="M20 8v6"/><path d="M17 11h6"/></svg>`;
+    }
+
+    if (kind === "group_events") {
+        return `<svg ${common} aria-hidden="true"><path d="M16 3v4"/><path d="M8 3v4"/><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18"/><path d="M8 14h3"/><path d="M13 14h3"/></svg>`;
+    }
+
+    if (kind === "badges") {
+        return `<svg ${common} aria-hidden="true"><circle cx="12" cy="8" r="5"/><path d="m8.5 13.5-1 7 4.5-2.5 4.5 2.5-1-7"/></svg>`;
+    }
+
+    return `<svg ${common} aria-hidden="true"><path d="M12 3 9.5 9H14l-2 12 6-10h-4.5L16 3z"/></svg>`;
+}
+
+function createClubActivitySection(metrics) {
+    const section = document.createElement("section");
+    section.className = "profile-activity";
+    section.innerHTML = `
+        <h3 class="section-title">Активность в клубе</h3>
+        <div class="activity-grid">
+            ${[
+                { key: "oneOnOne", icon: "one_on_one", label: "1-на-1 встречи" },
+                { key: "groupEvents", icon: "group_events", label: "Групповые события" },
+                { key: "badges", icon: "badges", label: "Бейджи" },
+                { key: "points", icon: "points", label: "Баллы" },
+            ].map((item) => {
+                const metric = formatActivityMetric(metrics[item.key]);
+                return `
+                    <article class="activity-metric-card">
+                        <div class="activity-metric-icon">${renderActivityIcon(item.icon)}</div>
+                        <div class="activity-metric-copy">
+                            <div class="activity-metric-value${metric.empty ? " is-empty" : ""}">${escapeHtml(metric.text)}</div>
+                            <div class="activity-metric-label">${escapeHtml(item.label)}</div>
+                        </div>
+                    </article>
+                `;
+            }).join("")}
+        </div>
+    `;
+    return section;
+}
+
 // Профили
 function openUserProfilePage(tg_id) {
     if (!tg_id) {
@@ -679,336 +812,28 @@ async function loadScreen(name) {
 
 const screenInits = {
     home() {
-        const btn = $qs("#startBtn");
-        if (btn) btn.addEventListener("click", startEating);
-        const stopBtn = $qs("#stopBtn");
-        if (stopBtn) stopBtn.addEventListener("click", stopEating);
-        fetchSimilarAndRender();
-        loadPlacesIntoHome()
+        initHomeFeed();
     },
     feed() {
-        const btn = $qs("#refreshNearby");
-        if (btn) btn.addEventListener("click", async () => {
-            const tg_id = Number(localStorage.getItem("meeteat_tg_id"));
-            const lat = 0, lon = 0;
-            try {
-                const q = await fetch(`/nearby?tg_id=${tg_id}&lat=${lat}&lon=${lon}`).then(r => r.json());
-                console.log("nearby:", q);
-            } catch(e) {
-                console.error(e);
-            }
-        });
-        const eatCircle = $qs("#eatCircle");
-        if (eatCircle) {
-            eatCircle.addEventListener("click", async () => {
-                const isActive = eatCircle.classList.contains("active");
-                if (isActive) {
-                    if (confirm("Остановить сессию?")) {
-                        await stopEating();
-                        showEatHint("Нажми на кнопку, чтобы найти людей рядом");
-                    }
-                    return;
-                }
-                startEatingWithDelay();
-            });
-            eatCircle.addEventListener("keydown", (ev) => {
-                if (ev.key === "Enter" || ev.key === " ") {
-                    ev.preventDefault();
-                    eatCircle.click();
-                }
-            });
-        }
+        initLightningHub();
     },
-    map(){},
+    map(){
+        initStoreScreen();
+    },
     chat(){},
-    profile: async function() {
-        const avatarEl = $qs("#profileAvatar");
-        const nameEl = $qs("#profileName");
-        const usernameEl = $qs("#profileUsername");
-        const ageEl = $qs("#profileAge");
-        const geoEl = $qs("#profileGeo");
-        const meetList = $qs("#meetList");
-        const tagsPanel = $qs("#tagsPanel");
-        const settingsBtn = $qs("#profileSettings");
-        function setImgWithFallback(imgEl, src) {
-            if (!imgEl) return;
-            imgEl.onerror = () => { imgEl.src = "/static/images/default_avatar.svg"; };
-            imgEl.src = src || "/static/images/default_avatar.svg";
-        }
-        // reset UI
-        if (meetList) meetList.innerHTML = '<div class="muted">Загрузка...</div>';
-        if (tagsPanel) {
-            const addBtn = tagsPanel.querySelector(".tag.outline") || null;
-            tagsPanel.innerHTML = "";
-            if (addBtn) tagsPanel.appendChild(addBtn);
-        }
-        const tg_id = getTgId();
-        if (!tg_id) {
-            const name = localStorage.getItem("meeteat_name") || "Пользователь";
-            const username = localStorage.getItem("meeteat_username") || "";
-            const avatar = localStorage.getItem("meeteat_avatar") || "/static/images/default_avatar.svg";
-            setImgWithFallback(avatarEl, avatar);
-            if (nameEl) nameEl.textContent = name;
-            if (usernameEl) usernameEl.textContent = username ? `@${username}` : "";
-            if (ageEl) ageEl.textContent = "";
-            if (meetList) meetList.innerHTML = '<div class="muted">Контактов не найдено</div>';
-            return;
-        }
-        // settings opens edit screen
-        if (settingsBtn) {
-            settingsBtn.onclick = () => {
-                loadScreen("profile_edit");
-            };
-        }
+    community() {
         try {
-            const res = await fetch(`/api/profile?tg_id=${tg_id}`, { cache: "no-store" }).then(r => r.json());
-            if (!res.ok) {
-                console.warn("profile fetch failed", res);
-                return;
-            }
-            const u = res.user || {};
-            setImgWithFallback(avatarEl, u.avatar);
-            if (nameEl) nameEl.textContent = u.name || u.username || "Пользователь";
-            if (usernameEl) usernameEl.textContent = u.username ? `@${u.username}` : "";
-            if (ageEl) ageEl.textContent = u.age ? `${u.age} лет` : "";
-            
-            // tags
-            const tags = res.tags || [];
-            if (tagsPanel) {
-                tagsPanel.innerHTML = "";
-                for (const t of tags) {
-                    const btn = document.createElement("button");
-                    btn.className = "tag";
-                    btn.textContent = t;
-                    tagsPanel.appendChild(btn);
-                }
-                const add = document.createElement("button");
-                add.className = "tag outline";
-                add.textContent = "Добавить +";
-                add.addEventListener("click", async () => {
-                    try {
-                        const tg = getTgId();
-                        if (!tg) return alert("tg_id не найден");
-                        const resp = await fetch(`/api/profile/tags?tg_id=${encodeURIComponent(tg)}`, { cache: "no-store" })
-                            .then(r => r.json());
-                        const current = (resp && resp.ok && Array.isArray(resp.tags)) ? resp.tags : [];
-                        openTagModal(current, null);
-                    } catch (e) {
-                        console.warn("profile fetch failed for modal", e);
-                        openTagModal([], null);
-                    }
-                });
-                tagsPanel.appendChild(add);
-            }
-
-            try {
-                // удалим старый блок если он есть
-                const oldMatch = $qs("#profileMatchCount");
-                if (oldMatch) oldMatch.remove();
-                const oldInterestsTitle = $qs("#profileInterestsTitle");
-                if (oldInterestsTitle) oldInterestsTitle.remove();
-                const oldReviewsTitle = $qs("#profileReviewsTitle");
-                if (oldReviewsTitle) oldReviewsTitle.remove();
-                const prev = $qs("#profileReviewsSummary");
-                if (prev) prev.remove();
-
-
-                // заголовок для интересов
-                const interestsTitle = document.createElement("h3");
-                interestsTitle.id = "profileInterestsTitle";
-                interestsTitle.textContent = "Мои интересы";
-                interestsTitle.className = "section-title";
-
-                // заголовок для отзывов
-                const reviewsTitle = document.createElement("h3");
-                reviewsTitle.id = "profileReviewsTitle";
-                reviewsTitle.textContent = "Мои отзывы";
-                reviewsTitle.className = "section-title";
-
-                // блок для метчингов
-                const matchEl = document.createElement("h3");
-                matchEl.id = "profileMatchCount";
-                matchEl.className = "section-title match-count";
-                matchEl.style.cssText = "display:flex;align-items:center;gap:12px;margin:10px 0;font-weight:700;";
-                
-                let matchCount = 0;
-                try {
-                    matchCount = Number(res.match_count ?? res.matches_count ?? res.matchings_count ?? 0);
-                    if (!matchCount && Array.isArray(res.matches)) matchCount = res.matches.length;
-                    if (!matchCount && Array.isArray(res.matchings)) matchCount = res.matchings.length;
-                    if (!Number.isFinite(matchCount)) matchCount = 0;
-                } catch (e) {
-                    matchCount = 0;
-                }
-
-                const lbl = document.createElement("span");
-                lbl.textContent = "Количество метчингов:";
-                lbl.style.cssText = "font-weight:700; font-size:21px; margin-left:3px";
-                const num = document.createElement("span");
-                num.className = "match-number";
-                num.textContent = String(matchCount);
-                num.setAttribute("aria-hidden", "true");
-                num.style.cssText = "font-weight:700; font-size:21px;";
-                matchEl.appendChild(lbl);
-                matchEl.appendChild(num);
-
-                // блок для аггрегации отзывов
-                const reviewsSummary = document.createElement("div");
-                reviewsSummary.id = "profileReviewsSummary";
-                reviewsSummary.className = "reviews-summary";
-
-                // вставляем в правильном порядке: сначала метчинги, затем "Мои интересы" и теги, потом отзывы
-                if (tagsPanel && tagsPanel.parentNode) {
-                    const parent = tagsPanel.parentNode;
-                    parent.insertBefore(matchEl, tagsPanel);
-                    insertAfter(matchEl, interestsTitle);
-                    insertAfter(interestsTitle, tagsPanel);
-                    insertAfter(tagsPanel, reviewsTitle);
-                    insertAfter(reviewsTitle, reviewsSummary);
-                } else {
-                    const card = $qs(".profile-card");
-                    if (card) {
-                        card.appendChild(matchEl);
-                        card.appendChild(interestsTitle);
-                        if (tagsPanel) card.appendChild(tagsPanel);
-                        card.appendChild(reviewsTitle);
-                        card.appendChild(reviewsSummary);
-                    }
-                }
-
-                // отрисовка read-only реакций
-                function renderReadOnlyReactions(container, data = {counts:{}}) {
-                    container.innerHTML = "";
-                    const wrap = document.createElement("div");
-                    wrap.className = "reactions-wrap readonly";
-                    for (const r of reactions) {
-                        const lbl = r.label;
-                        const cnt = Number((data.counts && data.counts[lbl]) ? data.counts[lbl] : 0);
-                        const node = document.createElement("div");
-                        node.className = "reaction-item readonly";
-                        node.dataset.reaction = lbl;
-                        node.setAttribute("aria-hidden", "false");
-                        node.innerHTML = `
-                            <div class="reaction-emoji" aria-hidden="true">${r.emoji}</div>
-                            <div class="reaction-label">${escapeHtml(lbl)}</div>
-                            <span class="reaction-badge" aria-hidden="true">${cnt}</span>
-                        `;
-                        wrap.appendChild(node);
-                    }
-                    container.appendChild(wrap);
-                }
-
-                // загрузим агрегаты (counts) для текущего профиля
-                (async () => {
-                    try {
-                        const data = await fetchReviewsFor(tg_id);
-                        renderReadOnlyReactions(reviewsSummary, data);
-                    } catch (err) {
-                        console.warn("load profile reviews failed", err);
-                        reviewsSummary.innerHTML = '<div class="muted">Не удалось загрузить отзывы</div>';
-                    }
-                })();
-            } catch(e) {
-                console.warn("profile reviews insert failed", e);
-            }
-
-            // recent contacts (unchanged)
-            if (meetList) {
-                meetList.innerHTML = "";
-                const contacts = res.recent_contacts || [];
-                if (!contacts.length) meetList.innerHTML = '<div class="muted">Контактов не найдено</div>';
-                else {
-                    for (const c of contacts) {
-                        const art = document.createElement("article");
-                        art.className = "meet-card";
-                        const avatar = c.avatar || "/static/images/default_avatar.svg";
-                        const lastSeen = c.last_seen ? c.last_seen.split("T")[0] : "";
-                        art.innerHTML = `
-                        <img class="meet-avatar" src="${avatar}" alt="${c.name || c.username || 'user'}"/>
-                        <div class="meet-info">
-                            <div class="meet-name">${c.name || ('@' + (c.username || ''))}</div>
-                            <div class="meet-place">${c.username ? '@' + c.username : ''}${c.age ? ' · ' + c.age + ' лет' : ''}</div>
-                            <div class="meet-date">${lastSeen}</div>
-                        </div>
-                        `;
-                        const img = art.querySelector("img");
-                        if (img) img.onerror = () => { img.src = "/static/images/default_avatar.svg"; };
-                        meetList.appendChild(art);
-                    }
-                }
-            }
+            initCommunityScreen();
         } catch (e) {
-            console.error("profile load error", e);
+            console.error("initCommunityScreen failed:", e);
         }
+        renderCommunityFallback();
+    },
+    profile: async function() {
+        return initProfileScreen({ navigate: loadScreen });
     },
     profile_edit: async function() {
-        const tg_id = getTgId();
-        if (!tg_id) {
-            alert("tg_id не найден. Авторизуйтесь через Telegram.");
-            loadScreen("home");
-            return;
-        }
-        const nameInput = $qs("#editName");
-        const usernameInput = $qs("#editUsername");
-        const ageInput = $qs("#editAge");
-        const avatarInput = $qs("#editAvatar");
-        const avatarPreview = $qs("#editAvatarPreview");
-        const saveBtn = $qs("#saveProfileBtn");
-        const cancelBtn = $qs("#cancelEditBtn");
-        function setImgWithFallback(imgEl, src) {
-            if (!imgEl) return;
-            imgEl.onerror = () => { imgEl.src = "/static/images/default_avatar.svg"; };
-            imgEl.src = src || "/static/images/default_avatar.svg";
-        }
-        try {
-            const resp = await fetch(`/api/profile?tg_id=${encodeURIComponent(tg_id)}`, { cache: "no-store" });
-            if (!resp.ok) {
-                console.warn("profile fetch http failed", resp.status, resp.statusText);
-                alert("Не удалось загрузить профиль (сервер вернул ошибку)");
-                loadScreen("profile");
-                return;
-            }
-            const res = await resp.json();
-            const u = res.user || {};
-            if (nameInput) nameInput.value = u.name || "";
-            if (usernameInput) usernameInput.value = u.username || "";
-            if (ageInput) ageInput.value = u.age ? String(u.age) : "";
-            if (avatarInput) avatarInput.value = u.avatar || "";
-            setImgWithFallback(avatarPreview, u.avatar);
-            // preview avatar on input change
-            if (avatarInput) avatarInput.addEventListener("input", () => setImgWithFallback(avatarPreview, avatarInput.value));
-            // cancel
-            if (cancelBtn) cancelBtn.onclick = () => loadScreen("profile");
-            // save - только профиль (без тегов)
-            if (saveBtn) saveBtn.onclick = async () => {
-                const newName = nameInput ? nameInput.value.trim() || null : null;
-                const newUsername = usernameInput ? usernameInput.value.trim() || null : null;
-                const newAgeVal = ageInput && ageInput.value ? Number(ageInput.value) : null;
-                const newAvatar = avatarInput ? avatarInput.value.trim() || null : null;
-                const updatePayload = { tg_id };
-                if (newName !== null) updatePayload.name = newName;
-                if (newAvatar) updatePayload.avatar = newAvatar;
-                if (newAgeVal !== null && !Number.isNaN(newAgeVal)) updatePayload.age = newAgeVal;
-                if (newUsername !== null) updatePayload.username = newUsername;
-                try {
-                    const upd = await postJson("/api/profile/update", updatePayload);
-                    if (!upd || !upd.ok) throw new Error("update failed");
-                    alert("Профиль сохранён");
-                    // update local cache
-                    if (newName) localStorage.setItem("meeteat_name", newName);
-                    if (newUsername) localStorage.setItem("meeteat_username", newUsername);
-                    if (newAvatar) localStorage.setItem("meeteat_avatar", newAvatar);
-                    loadScreen("profile");
-                } catch (e) {
-                    console.error(e);
-                    alert("Ошибка при сохранении: " + (e.message || e));
-                }
-            };
-        } catch (e) {
-            console.error("profile_edit load error", e);
-            alert("Ошибка загрузки профиля");
-            loadScreen("profile");
-        }
+        return initProfileEditScreen({ navigate: loadScreen });
     },
 };
 screenInits.user_profile_view = async function() {
@@ -1035,6 +860,7 @@ screenInits.user_profile_view = async function() {
         const data = await res.json();
         if (!data || !data.ok) throw new Error("profile fetch failed");
         const u = data.user || {};
+        const previewMember = readSessionJson("view_member_preview") || {};
         if (viewAvatar) { viewAvatar.onerror = () => { viewAvatar.src = "/static/images/default_avatar.svg"; }; viewAvatar.src = u.avatar || "/static/images/default_avatar.svg"; }
         if (viewName) viewName.textContent = u.name || (u.username ? "@" + u.username : "Пользователь");
         // if (viewUsername) viewUsername.textContent = u.username ? `@${u.username}` : "";
@@ -1076,15 +902,38 @@ screenInits.user_profile_view = async function() {
         numView.style.cssText = "font-weight:700; font-size:21px;";
         matchElView.appendChild(lblView);
         matchElView.appendChild(numView);
+        const activityMetrics = {
+            oneOnOne: firstMeaningfulMetric(
+                u.one_on_one_meetings_count,
+                previewMember.one_on_one_meetings_count,
+                previewMember.one_on_one_count
+            ),
+            groupEvents: firstMeaningfulMetric(
+                u.group_events_count,
+                previewMember.group_events_count,
+                previewMember.group_events
+            ),
+            badges: firstMeaningfulMetric(
+                Array.isArray(u.badges_preview) ? u.badges_preview.length : null,
+                Array.isArray(previewMember.badges_preview) ? previewMember.badges_preview.length : null
+            ),
+            points: firstMeaningfulMetric(
+                u.points_balance,
+                previewMember.points_balance
+            ),
+        };
+        const activitySection = createClubActivitySection(activityMetrics);
         if (profileCard) {
             if (topNode && topNode.nextSibling) {
                 profileCard.insertBefore(matchElView, topNode.nextSibling); // match first
                 insertAfter(matchElView, interestsTitle);                  // then interests title
                 insertAfter(interestsTitle, viewTagsPanel);                // then tags panel
+                insertAfter(viewTagsPanel, activitySection);               // then activity
             } else {
                 profileCard.appendChild(matchElView);
                 profileCard.appendChild(interestsTitle);
                 profileCard.appendChild(viewTagsPanel);
+                profileCard.appendChild(activitySection);
             }
         }
     } catch (e) {
@@ -1642,3 +1491,5 @@ export {
     openUserProfilePage, loadScreen, runScreenInit,
     tryAutoStart
 };
+
+
