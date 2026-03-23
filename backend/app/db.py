@@ -510,70 +510,63 @@ async def _create_store_integrity_triggers(db: aiosqlite.Connection) -> None:
     )
 
 
-async def _seed_store_catalog(db: aiosqlite.Connection) -> None:
-    categories = [
-        ("all", "Все", 0),
-        ("services", "Сервисы", 10),
-        ("mentoring", "Менторство", 20),
-        ("merch", "Атрибутика", 30),
-        ("partners", "Партнёры", 40),
-    ]
-    for slug, title, sort_order in categories:
-        await db.execute(
-            """
-            INSERT INTO store_categories (slug, title, sort_order, is_active)
-            VALUES (?, ?, ?, 1)
-            ON CONFLICT(slug) DO UPDATE SET
-                title = excluded.title,
-                sort_order = excluded.sort_order,
-                is_active = 1
-            """,
-            (slug, title, int(sort_order)),
-        )
+STORE_SEED_CATEGORY_SLUGS = (
+    "all",
+    "services",
+    "mentoring",
+    "merch",
+    "partners",
+)
 
-    products = [
-        ("mentoring", "Разбор от Олега", "Личный разбор вашего кейса/вопроса (20-30 минут).", 50, 1, 1, None, None, "mentor_oleg_review"),
-        ("mentoring", "Трекерство на месяц", "Сопровождение на 1 месяц: еженедельные чек-ины и фокус.", 150, 1, 1, None, 1, "tracker_month"),
-        ("merch", "Футболка 999", "Клубная футболка с символикой 999.", 20, 0, 1, 15, 1, "tshirt_999"),
-        ("merch", "Ручка 999", "Клубная ручка 999 (металлик/премиум).", 5, 0, 1, 39, 2, "pen_999"),
-        ("services", "VIP место на групповую встречу", "Приоритетная запись на ближайший групповой мастермайнд.", 30, 1, 1, 10, None, "vip_group_slot"),
-        ("partners", "Скидка от партнёра: Кофейня", "Скидка 15% в партнёрской кофейне.", 10, 0, 1, 50, 1, "partner_coffee_discount"),
-        ("services", "Билет на закрытый ивент", "Доступ на закрытый клубный формат (ограничено).", 60, 0, 1, 8, 1, "closed_event_ticket"),
-    ]
-    for category_slug, title, description, price, is_repeatable, is_active, stock_limit, per_user_limit, image_key in products:
-        await db.execute(
-            """
-            INSERT INTO store_products (
-                category_id, title, description, price_points, is_active, is_repeatable,
-                stock_limit, per_user_limit, image_key, badge_award_id, created_at, updated_at
-            )
-            VALUES (
-                (SELECT id FROM store_categories WHERE slug = ?),
-                ?, ?, ?, ?, ?, ?, ?, ?, NULL, datetime('now'), datetime('now')
-            )
-            ON CONFLICT(title) DO UPDATE SET
-                category_id = excluded.category_id,
-                description = excluded.description,
-                price_points = excluded.price_points,
-                is_active = excluded.is_active,
-                is_repeatable = excluded.is_repeatable,
-                stock_limit = excluded.stock_limit,
-                per_user_limit = excluded.per_user_limit,
-                image_key = excluded.image_key,
-                updated_at = datetime('now')
+STORE_SEED_PRODUCT_IMAGE_KEYS = (
+    "mentor_oleg_review",
+    "tracker_month",
+    "tshirt_999",
+    "pen_999",
+    "vip_group_slot",
+    "partner_coffee_discount",
+    "closed_event_ticket",
+)
+
+
+async def _cleanup_seed_store_catalog_if_unused(db: aiosqlite.Connection) -> None:
+    cur = await db.execute("SELECT COUNT(*) FROM store_orders")
+    orders_count = int((await cur.fetchone())[0] or 0)
+    if orders_count > 0:
+        return
+
+    cur = await db.execute("SELECT COUNT(*) FROM store_products")
+    total_products = int((await cur.fetchone())[0] or 0)
+    if total_products > 0:
+        product_placeholders = ", ".join("?" for _ in STORE_SEED_PRODUCT_IMAGE_KEYS)
+        cur = await db.execute(
+            f"""
+            SELECT COUNT(*)
+            FROM store_products
+            WHERE image_key IN ({product_placeholders})
             """,
-            (
-                category_slug,
-                title,
-                description,
-                int(price),
-                int(is_active),
-                int(is_repeatable),
-                stock_limit,
-                per_user_limit,
-                image_key,
-            ),
+            STORE_SEED_PRODUCT_IMAGE_KEYS,
         )
+        seed_products = int((await cur.fetchone())[0] or 0)
+        if seed_products == total_products:
+            await db.execute(
+                f"DELETE FROM store_products WHERE image_key IN ({product_placeholders})",
+                STORE_SEED_PRODUCT_IMAGE_KEYS,
+            )
+
+    category_placeholders = ", ".join("?" for _ in STORE_SEED_CATEGORY_SLUGS)
+    await db.execute(
+        f"""
+        DELETE FROM store_categories
+        WHERE slug IN ({category_placeholders})
+          AND id NOT IN (
+              SELECT DISTINCT category_id
+              FROM store_products
+              WHERE category_id IS NOT NULL
+          )
+        """,
+        STORE_SEED_CATEGORY_SLUGS,
+    )
 
 
 async def init_db() -> None:
@@ -871,7 +864,7 @@ async def init_db() -> None:
         await _migrate_events_table(db, admin_user_id=admin_user_id)
         await _create_events_integrity_triggers(db)
         await _create_store_integrity_triggers(db)
-        await _seed_store_catalog(db)
+        await _cleanup_seed_store_catalog_if_unused(db)
 
         await db.execute(
             "UPDATE events SET created_by_user_id = COALESCE(created_by_user_id, owner_id, ?)",
