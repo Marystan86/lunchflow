@@ -1,41 +1,8 @@
-<section class="screen home">
-    <header class="screen-header">
-        <h2>Лента</h2>
+﻿<section class="screen home-feed-screen">
+    <header class="home-feed-header">
+        <h2 class="home-feed-title">Клуб</h2>
+        <p class="home-feed-subtitle">Новости и события клуба</p>
     </header>
 
-    <div class="container">
-        <div class="hero-card">
-            <h3 class="hero-title">Технологии</h3>
-            <p class="hero-sub">Считаешь ли ты, что технологии делают нас ближе или дальше друг от друга?</p>
-            <button class="hero-fav" aria-label="favorite">❤</button>
-        </div>
-
-        <h4 class="section-title">Куда сходить пообедать?</h4>
-
-        <div class="places-carousel">
-            <!-- <article class="place-card">
-                <div class="place-info">
-                    <h5>Coffee Boom</h5>
-                    <div class="rating">★★★★★</div>
-                    <div class="distance">41 м</div>
-                </div>
-                <img src="/static/images/coffeeboom.jpg" alt="Coffee Boom"/>
-            </article> -->
-
-            <!-- <article class="place-card">
-                <div class="place-info">
-                    <h5>ZebraCOFFEE</h5>
-                    <div class="rating">★★★★★</div>
-                    <div class="distance">100 м</div>
-                </div>
-                <img src="/static/images/zebra.jpg" alt="ZebraCOFFEE"/>
-            </article> -->
-        </div>
-
-        <h4 class="section-title">Найдите общие интересы</h4>
-        <div id="interestList" class="interest-list">
-            <!-- сюда JS будет рендерить реальные карточки -->
-            <div class="muted" id="interestListPlaceholder">Загрузка похожих пользователей…</div>
-        </div>
-    </div>
+    <div id="homeFeedList" class="home-feed-list" aria-live="polite"></div>
 </section>

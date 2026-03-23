@@ -414,7 +414,14 @@ async function fetchNearbyAndRender(tg_id, lat, lon, radius_km = 3.0) {
     if (!countEl || !cards) return;
     cards.innerHTML = '<div class="muted">Ищем людей поблизости…</div>';
     try {
-        const res = await fetch(`/nearby?tg_id=${encodeURIComponent(tg_id)}&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&radius_km=${encodeURIComponent(radius_km)}`, { cache: "no-store" });
+        const qs = new URLSearchParams({ tg_id: String(tg_id), radius_km: String(radius_km) });
+        const latNum = Number(lat);
+        const lonNum = Number(lon);
+        if (Number.isFinite(latNum) && Number.isFinite(lonNum)) {
+            qs.set("lat", String(latNum));
+            qs.set("lon", String(lonNum));
+        }
+        const res = await fetch(`/nearby?${qs.toString()}`, { cache: "no-store" });
         if (!res.ok) throw new Error("nearby fetch failed " + res.status);
         const data = await res.json();
         const items = data.nearby || [];

@@ -1,4 +1,4 @@
-# main.py
+﻿# main.py
 
 import logging
 import asyncio
@@ -11,8 +11,13 @@ from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 load_dotenv()
 
-from routes import router as api_router
+from routes import router as legacy_router
 from routes import survey_dispatcher_loop
+from backend.app.api import api_router
+from backend.app.db import init_db as init_backend_db
+from backend.app.settings import settings as backend_settings
+from backend.app.services import badges_service
+from backend.app.tasks.scheduler import survey_scheduler_loop
 
 
 
@@ -33,6 +38,40 @@ async def init_db():
                 age INTEGER,
                 created_at TEXT DEFAULT (datetime('now')),
                 updated_at TEXT DEFAULT (datetime('now'))
+            );
+        """)
+        # Legacy-safe: add missing users columns when running on older DBs.
+        for alter_sql in (
+            "ALTER TABLE users ADD COLUMN username TEXT",
+            "ALTER TABLE users ADD COLUMN name TEXT",
+            "ALTER TABLE users ADD COLUMN avatar TEXT",
+            "ALTER TABLE users ADD COLUMN age INTEGER",
+            "ALTER TABLE users ADD COLUMN created_at TEXT DEFAULT (datetime('now'))",
+            "ALTER TABLE users ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))",
+        ):
+            try:
+                await db.execute(alter_sql)
+            except Exception:
+                pass
+
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS profiles (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER UNIQUE NOT NULL,
+                full_name TEXT,
+                title TEXT,
+                services TEXT,
+                monthly_turnover_range TEXT,
+                yearly_turnover_range TEXT,
+                team_size TEXT,
+                key_competencies TEXT,
+                club_audience_request TEXT,
+                hobbies TEXT,
+                help_topics TEXT,
+                instagram_handle TEXT,
+                qr_url TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
             );
         """)
 
@@ -69,8 +108,8 @@ async def init_db():
             CREATE TABLE IF NOT EXISTS notifications (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
-                type TEXT NOT NULL,            -- например "invite_response"
-                payload TEXT,                  -- json string с деталями
+                type TEXT NOT NULL,            -- РЅР°РїСЂРёРјРµСЂ "invite_response"
+                payload TEXT,                  -- json string СЃ РґРµС‚Р°Р»СЏРјРё
                 read INTEGER DEFAULT 0,
                 created_at TEXT DEFAULT (datetime('now'))
             );
@@ -127,17 +166,17 @@ async def init_db():
                 ON reviews(target_user_id);
         """)
 
-        # places (заведения)
+        # places (Р·Р°РІРµРґРµРЅРёСЏ)
         await db.execute("""
             CREATE TABLE IF NOT EXISTS places (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
                 category TEXT,
                 rating REAL DEFAULT 0.0,
-                open_time TEXT,   -- формат "HH:MM"
-                close_time TEXT,  -- формат "HH:MM"
+                open_time TEXT,   -- С„РѕСЂРјР°С‚ "HH:MM"
+                close_time TEXT,  -- С„РѕСЂРјР°С‚ "HH:MM"
                 address TEXT,
-                photo TEXT,       -- url к картинке
+                photo TEXT,       -- url Рє РєР°СЂС‚РёРЅРєРµ
                 created_by_tg_id INTEGER,
                 created_at TEXT DEFAULT (datetime('now'))
             );
@@ -167,13 +206,13 @@ async def cleanup_task(stop_event: asyncio.Event):
                 logger = logging.getLogger("root")
                 logger.exception("cleanup_task: db update failed: %s", e)
 
-            # ждём либо событие стопа, либо таймаут - но таймаут не должен завершать таск с ошибкой
+            # Р¶РґС‘Рј Р»РёР±Рѕ СЃРѕР±С‹С‚РёРµ СЃС‚РѕРїР°, Р»РёР±Рѕ С‚Р°Р№РјР°СѓС‚ - РЅРѕ С‚Р°Р№РјР°СѓС‚ РЅРµ РґРѕР»Р¶РµРЅ Р·Р°РІРµСЂС€Р°С‚СЊ С‚Р°СЃРє СЃ РѕС€РёР±РєРѕР№
             try:
                 await asyncio.wait_for(stop_event.wait(), timeout=60.0)
             except asyncio.TimeoutError:
                 continue
     except asyncio.CancelledError:
-        # ожидаемо при shutdown
+        # РѕР¶РёРґР°РµРјРѕ РїСЂРё shutdown
         logger = logging.getLogger("root")
         logger.info("cleanup_task cancelled")
         return
@@ -182,36 +221,48 @@ async def cleanup_task(stop_event: asyncio.Event):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # инициализация БД
+    # РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ Р‘Р”
     await init_db()
+    await init_backend_db()
+    await badges_service.ensure_seed()
 
-    # глобальная http сессия для всего приложения (для Telegram и других запросов)
+    # РіР»РѕР±Р°Р»СЊРЅР°СЏ http СЃРµСЃСЃРёСЏ РґР»СЏ РІСЃРµРіРѕ РїСЂРёР»РѕР¶РµРЅРёСЏ (РґР»СЏ Telegram Рё РґСЂСѓРіРёС… Р·Р°РїСЂРѕСЃРѕРІ)
     import socket
     app.state.http_session = aiohttp.ClientSession(connector=aiohttp.TCPConnector(limit=50, family=socket.AF_INET))
 
     stop_event = asyncio.Event()
 
-    # один cleanup таск
+    # РѕРґРёРЅ cleanup С‚Р°СЃРє
     cleanup_t = asyncio.create_task(cleanup_task(stop_event))
 
-    # стартуем survey worker; если survey_dispatcher_loop требует args - передайте их
+    # СЃС‚Р°СЂС‚СѓРµРј survey worker; РµСЃР»Рё survey_dispatcher_loop С‚СЂРµР±СѓРµС‚ args - РїРµСЂРµРґР°Р№С‚Рµ РёС…
     survey_task = asyncio.create_task(survey_dispatcher_loop())
+    new_survey_task = None
+    if backend_settings.survey_scheduler_enabled:
+        new_survey_task = asyncio.create_task(
+            survey_scheduler_loop(stop_event=stop_event, session=app.state.http_session)
+        )
 
     app.state._survey_task = survey_task
     app.state._cleanup_task = cleanup_t
+    app.state._new_survey_task = new_survey_task
 
     try:
         yield
     finally:
-        # начинаем аккуратный shutdown
+        # РЅР°С‡РёРЅР°РµРј Р°РєРєСѓСЂР°С‚РЅС‹Р№ shutdown
         stop_event.set()
 
-        # отменяем таски и ждём их завершения аккуратно
-        for t in (cleanup_t, survey_task):
+        # РѕС‚РјРµРЅСЏРµРј С‚Р°СЃРєРё Рё Р¶РґС‘Рј РёС… Р·Р°РІРµСЂС€РµРЅРёСЏ Р°РєРєСѓСЂР°С‚РЅРѕ
+        tasks_to_cancel = [cleanup_t, survey_task]
+        if new_survey_task is not None:
+            tasks_to_cancel.append(new_survey_task)
+
+        for t in tasks_to_cancel:
             t.cancel()
 
-        # дождёмся с обработкой CancelledError
-        for t in (cleanup_t, survey_task):
+        # РґРѕР¶РґС‘РјСЃСЏ СЃ РѕР±СЂР°Р±РѕС‚РєРѕР№ CancelledError
+        for t in tasks_to_cancel:
             try:
                 await t
             except asyncio.CancelledError:
@@ -219,7 +270,7 @@ async def lifespan(app: FastAPI):
             except Exception:
                 logging.exception("Error awaiting task %s during shutdown", t)
 
-        # закроем http сессию
+        # Р·Р°РєСЂРѕРµРј http СЃРµСЃСЃРёСЋ
         try:
             await app.state.http_session.close()
         except Exception:
@@ -227,7 +278,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan, title="meet&eat")
-app.include_router(api_router)
+app.include_router(legacy_router)
+app.include_router(api_router, prefix="/api")
 app.mount("/static", StaticFiles(directory="static", html=True), name="static")
 
 @app.middleware("http")
@@ -235,3 +287,4 @@ async def add_ngrok_header(request: Request, call_next):
     resp = await call_next(request)
     resp.headers["ngrok-skip-browser-warning"] = "1"
     return resp
+

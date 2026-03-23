@@ -1,4 +1,4 @@
-<!-- static\index.html -->
+﻿<!-- static\index.html -->
 
 <!doctype html>
 <html lang="ru">
@@ -6,11 +6,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>LunchFlow</title>
-    <link rel="stylesheet" href="/static/css/basic.css">
-    <link rel="stylesheet" href="/static/css/home.css">
-    <link rel="stylesheet" href="/static/css/nav.css">
-    <link rel="stylesheet" href="/static/css/feed.css">
-    <link rel="stylesheet" href="/static/css/profile.css">
+    <link rel="stylesheet" href="/static/css/basic.css?v=20260314a">
+    <link rel="stylesheet" href="/static/css/home.css?v=20260314a">
+    <link rel="stylesheet" href="/static/css/nav.css?v=20260214c">
+    <link rel="stylesheet" href="/static/css/feed.css?v=20260314b">
+    <link rel="stylesheet" href="/static/css/community.css?v=20260314a">
+    <link rel="stylesheet" href="/static/css/store.css?v=20260315a">
+    <link rel="stylesheet" href="/static/css/profile.css?v=20260315b">
     <link rel="stylesheet" href="/static/css/dev.css">
     <link rel="stylesheet" href="/static/css/places.css">
     <link rel="stylesheet" href="/static/css/modal.css">
@@ -18,32 +20,30 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="/static/hero.js" defer></script>
     <script type="module" src="/static/places.js" defer></script>
-    <script type="module" src="/static/client.js" defer></script>
+    <script type="module" src="/static/client.js?v=20260315c" defer></script>
 </head>
 <body>
     <div class = "mobile-container">
         <nav id="menu" class="menu">
-            <button data-screen="home">
+            <button data-screen="home" aria-label="Home">
                 <img src="/static/images/home.svg" alt="home"/>
             </button>
-            <button data-screen="chat">
-                <img src="/static/images/chat.svg" alt="chat"/>
+            <button data-screen="community" aria-label="Community">
+                <img src="/static/images/community.svg" alt="community"/>
             </button>
-            <button data-screen="feed">
-                <img src="/static/images/feed.svg" alt="feed"/>
+            <button data-screen="feed" aria-label="Feed">
+                <img class="menu-core-icon" src="/static/images/lightning.svg" alt="lightning"/>
             </button>
-            <button data-screen="map">
-                <img src="/static/images/map.svg" alt="map"/>
+            <button data-screen="map" aria-label="Shop">
+                <img src="/static/images/store.svg" alt="store"/>
             </button>
-            <button data-screen="profile">
+            <button data-screen="profile" aria-label="Profile">
                 <img src="/static/images/profile.svg" alt="profile"/>
             </button>
         </nav>
 
         <main id="app" class="app"></main>
-    </div>
-
-    <!-- container for dynamic modals (если вы не используете JS-creator) -->
+    </div>    <!-- container for dynamic modals (если вы не используете JS-creator) -->
 <div id="screenModals"></div>
 
 <!-- Tag modal (static) -->
@@ -99,3 +99,4 @@
 
 </body>
 </html>
+
